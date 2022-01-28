@@ -1,0 +1,21 @@
+{
+    "name" : "net-tools/paypal-js",
+	
+    "description" : "Client-side JS library to manage a simple e-shop with shopping cart and Paypal",
+	
+	"type": "library",
+	
+	"require" : {
+	},
+	
+    "license" : "MIT",
+
+    "authors": [
+        {
+            "name": "Pierre",
+            "email": "dev@nettools.ovh",
+            "role": "Developer"
+        }
+    ]
+
+}
