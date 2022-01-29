@@ -58,7 +58,7 @@
 		var PAYPAL_SCRIPT = 'https://www.paypal.com/sdk/js?currency=EUR&client-id=' + document.getElementById('paypal_client_id').value;
 		var script = document.createElement('script');
 		script.setAttribute('src', PAYPAL_SCRIPT);
-		script.onload = function(){ document.getElementById('btn_validate').disabled = false;}
+		script.onload = function(){ document.getElementById('btn_validate').disabled = document.getElementById('btn_express').disabled = false; }
 		document.head.appendChild(script);
 		
 		
@@ -115,7 +115,35 @@
 				{
 					document.getElementById('log').value = 'ko\n' + JSON.stringify(data);
 				}
+			);
+	}
+		
+		
+		
+	function express()
+	{
+		// reset buttons
+		document.getElementById('paypalbtns').innerHTML = "";
+		
+		
+		// create shop and set currency code for all API calls
+		var shop = new NTPaypal.Shop('EUR');
+		shop.expressBuy('Express buy product 1', 10, null, '#paypalbtns').then(function(data)
+				{
+					var log = 'Paypal express buy process OK\nThe transaction number is ' + data.purchase_units[0].payments.captures[0].id + '\n';
+					log += JSON.stringify(data, null, 3);
+					document.getElementById('log').value = log;
+			
+			
+					// reset paypal buttons
+					document.getElementById('paypalbtns').innerHTML = "";
+				}
 			)
+			.catch(function(data)
+				{
+					document.getElementById('log').value = 'ko\n' + JSON.stringify(data);
+				}
+			);
 	}
 		
 	</script>
@@ -165,7 +193,8 @@
 	</div>
 	
 	<div id="actions">
-		<input type="button" value="Validate shopping cart" onclick="go();" id="btn_validate" disabled> (please set client-ID first above)
+		<input type="button" value="Validate shopping cart" onclick="go();" id="btn_validate" disabled> 
+		<input type="button" value="Express buy 10€ (no cart)" onclick="express();" id="btn_express" disabled> (please set client-ID first above)
 	</div>
 	
 	<div id="paypalbtns"></div>

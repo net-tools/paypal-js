@@ -10,8 +10,23 @@ To install net-tools/paypal-js package, just require it through composer and ins
 ```
 
 
+## How to use (simple process)
+ 
+If no cart handling is required, and customer data is not needed, the script is rather simple :
 
-## How to use 
+```
+var shop = new NTPaypal.Shop('EUR');
+shop.expressBuy('product title', 10.50, 'PHYSICAL_GOODS', '#selector_here')
+```
+ 
+The `expressBuy` method expects a title, a amount, a category ('PHYSICAL_GOODS', 'DIGITAL_GOODS', 'DONATION') and a selector to 
+draw the Paypal buttons into. Category parameters can be omitted (null).
+
+ 
+ 
+ 
+
+## How to use (with cart support)
 
 This library defines several Javasript objects to manage products, customer details, shopping cart, order and makes it possible to launch a Paypal payment window.
 

@@ -92,13 +92,17 @@ NTPaypal.CartItem.prototype.toPaypalItem = function()
  */
 NTPaypal.Customer = function(firstname, surname, address1, address2, zipcode, city, countrycode, email, phone, phone_type)
 {
+	if ( !firstname )
+		throw new Error("'firstname' parameter of 'Customer' constructor not set");
+	
+	
 	this.firstname = firstname;
-	this.surname = surname;
-	this.address1 = address1;
-	this.address2 = address2;
-	this.zipcode = zipcode;
-	this.city = city;
-	this.countrycode = countrycode;
+	this.surname = surname || '';
+	this.address1 = address1 || '';
+	this.address2 = address2 || '';
+	this.zipcode = zipcode || '';
+	this.city = city || '';
+	this.countrycode = countrycode || '';
 	this.email = email;
 	this.phone = phone;
 	this.phone_type = phone_type;
@@ -116,8 +120,8 @@ NTPaypal.Customer.prototype.toPaypalShipping = function() {
 		name : { full_name : this.firstname + ' ' + this.surname },
 		type : 'SHIPPING',
 		address : {
-			address_line_1 : this.address1 || '',
-			address_line_2 : this.address2 || '',
+			address_line_1 : this.address1,
+			address_line_2 : this.address2,
 			admin_area_2 : this.city.toUpperCase(),
 			postal_code : this.zipcode,
 			country_code : this.countrycode
@@ -312,7 +316,7 @@ NTPaypal.Order = function(cart, customer, shipping, description, currency_code){
 	if ( !(cart instanceof NTPaypal.Cart) )
 		throw new TypeError("'cart' parameter of 'Order' constructor is not an instance of 'Cart'");
 	
-	if ( !(customer instanceof NTPaypal.Customer) )
+	if ( (typeof(customer)=='object') && !(customer instanceof NTPaypal.Customer) )
 		throw new TypeError("'customer' parameter of 'Order' constructor is not an instance of 'Customer'");
 
 	if ( !currency_code )
@@ -347,10 +351,9 @@ NTPaypal.Order.prototype.toPurchaseUnit = function()
 	}
 	
 	
-	// return purchase_unit struct : items, shipping details (customer address), total amount with breakdown (amount w/o VAT, total VAT, shipping cost)
-	return {
+	
+	var punit = {
 		items : content,
-		shipping : this.customer.toPaypalShipping(),
 		description : this.description,
 		amount : {
 			currency_code : this.currency_code,
@@ -361,7 +364,16 @@ NTPaypal.Order.prototype.toPurchaseUnit = function()
 				shipping : { currency_code : this.currency_code, value : this.shipping }
 			}
 		}
-	}
+	};
+
+
+	// if customer is known, adding it to request
+	if ( this.customer )
+		punit.shipping = this.customer.toPaypalShipping();
+	
+	
+	// return purchase_unit struct : items, shipping details (customer address), total amount with breakdown (amount w/o VAT, total VAT, shipping cost)
+	return punit;
 }
 
 
@@ -430,7 +442,7 @@ NTPaypal.Shop.prototype.newCustomer = function(firstname, surname, address1, add
  * Create a new Order object
  *
  * @param Cart Object of class Cart
- * @param Customer Object of class Customer
+ * @param null|Customer Object of class Customer or null to ignore customer data (the Paypal window won't be preset with customer data)
  * @param float shipping Shipping cost for order
  * @param string description Short description of order (may be null)
  * @return Order
@@ -454,6 +466,27 @@ NTPaypal.Shop.prototype.newCart = function(items){
 
 
 
+/**
+ * Quickly create required objects and show Paypal "buy now" buttons
+ *
+ * @param string title Short description of item purchased
+ * @param float value Amount to ask payment for
+ * @param string category Category of goods : PHYSICAL_GOODS, DIGITAL_GOODS, DONATION ; defaults to PHYSICAL_GOODS
+ * @param string selector Selector to identify a container in the page to render the button into
+ * @return Promise Return a promise resolved when payment is approved, rejected when canceled
+ */
+NTPaypal.Shop.prototype.expressBuy = function(title, value, category, selector){
+	// calling paypalButton method
+	return this.paypalButton(
+			// building simple order (cart, no customer data, 0 shipping, no description)
+			this.newOrder(this.newCart([this.newItem(title, title, 1, value, 0, '', category || 'PHYSICAL_GOODS')])),
+
+			// DOM selector
+			selector
+		);
+}
+
+
 
 /**
  * Show Paypal pay-now button for a given order
@@ -471,6 +504,33 @@ NTPaypal.Shop.prototype.paypalButton = function(order, selector)
 		throw new Error("'selector' parameter of 'paypalButton' function not set");
 		
 	
+	
+	// creating request with relevant objects
+	var req = {};
+	req.purchase_units = [ order.toPurchaseUnit() ];
+	
+	
+	
+	// maybe the customer is not set (no default values in Paypal window)
+	if ( order.customer )
+	{
+		if ( order.customer.email )
+		{
+			req.payer = req.payer || {};
+			req.payer.email_address = order.customer.email;
+		}
+
+		if ( order.customer.phone )
+		{
+			req.payer = req.payer || {};
+			req.payer.phone = {
+					phone_number : { national_number : order.customer.phone },
+					phone_type : order.customer.phone_type
+				};
+		}
+	}
+	
+	
 	// create a Promise to be returned to caller ; resolved when payment is approved, rejected if canceled
 	return new Promise(function(resolve, reject){
 		paypal.Buttons({
@@ -478,21 +538,7 @@ NTPaypal.Shop.prototype.paypalButton = function(order, selector)
 			// create order
 			createOrder: function(data, actions) {
 				// Set up the transaction
-				return actions.order.create(
-					{
-						// data about payer/customer ; used to set fields with relevant data already known
-						payer : {
-							email_address : order.customer.email,
-							phone : {
-								phone_number : { national_number : order.customer.phone },
-								phone_type : order.customer.phone_type
-							}
-						},
-						
-						// shopping cart content
-						purchase_units: [ order.toPurchaseUnit() ]
-					}
-				);
+				return actions.order.create(req);
 			},
 
 
