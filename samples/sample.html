@@ -28,7 +28,7 @@
 		
 		textarea {
 			margin-top:2em;
-			height:15em;
+			height:30em;
 		}
 		
 		div#paypalbtns {
@@ -87,9 +87,9 @@
 		var cust = shop.newCustomer(v('cust_firstname'), v('cust_surname'), v('cust_address'), '', v('cust_zipcode'), v('cust_city'), v('cust_country'), v('cust_email'), v('cust_mphone'), 'MOBILE');
 		
 		// create the products
-		var p1 = shop.newItem(v('p1_title'), v('p1_sku'), v('p1_quantity'), v('p1_price'), v('p1_tax'), v('p1_descr'));
+		var p1 = shop.newItem(v('p1_title'), v('p1_sku'), v('p1_quantity'), v('p1_price'), v('p1_tax'), v('p1_descr'), 'PHYSICAL_GOODS');
 		if ( v('p2_title') )
-			var p2 = shop.newItem(v('p2_title'), v('p2_sku'), v('p2_quantity'), v('p2_price'), v('p2_tax'), v('p2_descr'));
+			var p2 = shop.newItem(v('p2_title'), v('p2_sku'), v('p2_quantity'), v('p2_price'), v('p2_tax'), v('p2_descr'), 'DIGITAL_GOODS');
 		else
 			var p2 = null;
 		

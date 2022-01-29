@@ -16,9 +16,10 @@ var NTPaypal = NTPaypal || {};
  * @param float price Price for one product (excluding tax)
  * @param float tax VAT amount
  * @param string description Longer description of item (may be null)
+ * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
  * @param string currency_code Such as EUR, GBP, USD, etc.
  */
-NTPaypal.CartItem = function(title, id, quantity, price, tax, description, currency_code){
+NTPaypal.CartItem = function(title, id, quantity, price, tax, description, category, currency_code){
 	
 	this.title = title;
 	this.id = id;
@@ -26,6 +27,7 @@ NTPaypal.CartItem = function(title, id, quantity, price, tax, description, curre
 	this.price = price;
 	this.tax = tax || 0;
 	this.currency_code = currency_code;
+	this.category = category;
 	this.description = description || '';
 	
 	
@@ -39,6 +41,8 @@ NTPaypal.CartItem = function(title, id, quantity, price, tax, description, curre
 		throw new Error("'price' parameter of 'CartItem' constructor not set");
 	if ( typeof tax == 'undefined' )
 		throw new Error("'tax' parameter of 'CartItem' constructor not set");
+	if ( typeof category == 'undefined' )
+		throw new Error("'category' parameter of 'CartItem' constructor not set");
 	if ( !this.currency_code )
 		throw new Error("'currency_code' parameter of 'CartItem' constructor not set");
 	if ( this.quantity <= 0 )
@@ -61,7 +65,7 @@ NTPaypal.CartItem.prototype.toPaypalItem = function()
 		quantity : this.quantity,
 		description: this.description,
 		sku : this.id,
-		category : 'PHYSICAL_GOODS'
+		category : this.category
 	}
 }
 
@@ -390,11 +394,12 @@ NTPaypal.Shop = function(currency_code)
  * @param float price Price for one product (excluding tax)
  * @param float tax VAT amount
  * @param string description Longer description of item (may be null)
+ * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
  * @return CartItem
  */
-NTPaypal.Shop.prototype.newItem = function(title, id, quantity, price, tax, description)
+NTPaypal.Shop.prototype.newItem = function(title, id, quantity, price, tax, description, category)
 {
-	return new NTPaypal.CartItem(title, id, quantity, price, tax, description, this.currency_code);
+	return new NTPaypal.CartItem(title, id, quantity, price, tax, description, category, this.currency_code);
 }
 
 
