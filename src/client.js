@@ -30,19 +30,19 @@ NTPaypal.CartItem = function(title, id, quantity, price, tax, description, curre
 	
 	
 	if ( !this.title )
-		throw new Error("'title' parameter of 'CarItem' constructor not set");
+		throw new Error("'title' parameter of 'CartItem' constructor not set");
 	if ( !this.id )
-		throw new Error("'id' parameter of 'CarItem' constructor not set");
+		throw new Error("'id' parameter of 'CartItem' constructor not set");
 	if ( !this.quantity )
-		throw new Error("'quantity' parameter of 'CarItem' constructor not set");
+		throw new Error("'quantity' parameter of 'CartItem' constructor not set");
 	if ( typeof price == 'undefined' )
-		throw new Error("'price' parameter of 'CarItem' constructor not set");
+		throw new Error("'price' parameter of 'CartItem' constructor not set");
 	if ( typeof tax == 'undefined' )
-		throw new Error("'tax' parameter of 'CarItem' constructor not set");
+		throw new Error("'tax' parameter of 'CartItem' constructor not set");
 	if ( !this.currency_code )
-		throw new Error("'currency_code' parameter of 'CarItem' constructor not set");
-	if ( !this.quantity <= 0 )
-		throw new Error("'quantity' parameter of 'CarItem' constructor is not in the allowed range");
+		throw new Error("'currency_code' parameter of 'CartItem' constructor not set");
+	if ( this.quantity <= 0 )
+		throw new Error("'quantity' parameter of 'CartItem' constructor is not in the allowed range");
 }
 
 
@@ -82,8 +82,11 @@ NTPaypal.CartItem.prototype.toPaypalItem = function()
  * @param string zipcode
  * @param string city
  * @param string countrycode 2-characters identifying country
+ * @param string email 
+ * @param string phone
+ * @param string phone_type May be HOME or MOBILE
  */
-NTPaypal.Customer = function(firstname, surname, address1, address2, zipcode, city, countrycode)
+NTPaypal.Customer = function(firstname, surname, address1, address2, zipcode, city, countrycode, email, phone, phone_type)
 {
 	this.firstname = firstname;
 	this.surname = surname;
@@ -92,6 +95,9 @@ NTPaypal.Customer = function(firstname, surname, address1, address2, zipcode, ci
 	this.zipcode = zipcode;
 	this.city = city;
 	this.countrycode = countrycode;
+	this.email = email;
+	this.phone = phone;
+	this.phone_type = phone_type;
 }
 
 
@@ -125,13 +131,18 @@ NTPaypal.Customer.prototype.toPaypalShipping = function() {
 
 /**
  * Constructor of a shopping cart 
+ *
+ * @param CartItem[] items Array of CartItem objects ; content of shopping cart can be set later with add method instead of this items paremeters
  */
-NTPaypal.Cart = function(){
+NTPaypal.Cart = function(items){
+	
+	if ( (typeof(items) == 'object') && (items.constructor.name != 'Array') )
+		throw new TypeError("'items' parameter of 'Cart' constructor is not an array");
 	
 	/**
 	 * @property CartItem[] Array of cart items
 	 */
-	this.items = [];
+	this.items = items || [];
 }
 
 
@@ -300,7 +311,7 @@ NTPaypal.Order = function(cart, customer, shipping, description, currency_code){
 	if ( !(customer instanceof NTPaypal.Customer) )
 		throw new TypeError("'customer' parameter of 'Order' constructor is not an instance of 'Customer'");
 
-	if ( !this.currency_code )
+	if ( !currency_code )
 		throw new Error("'currency_code' parameter of 'Order' constructor not set");
 	
 	this.customer = customer;
@@ -319,20 +330,22 @@ NTPaypal.Order = function(cart, customer, shipping, description, currency_code){
  */
 NTPaypal.Order.prototype.toPurchaseUnit = function()
 {
+	var content = this.cart.toPaypalItems();
+	
 	// compute total amount
-	var itemsl = ret.items.length;
+	var itemsl = content.length;
 	var item_total = 0;
 	var tax_total = 0;
 	for ( var i = 0 ; i < itemsl ; i++ )
 	{
-		item_total += ret.items[i].quantity * ret.items[i].unit_amount.value;
-		tax_total += ret.items[i].quantity * ret.items[i].tax.value;
+		item_total += content[i].quantity * content[i].unit_amount.value;
+		tax_total += content[i].quantity * content[i].tax.value;
 	}
 	
 	
 	// return purchase_unit struct : items, shipping details (customer address), total amount with breakdown (amount w/o VAT, total VAT, shipping cost)
 	return {
-		items : this.cart.toPaypalItems(),
+		items : content,
 		shipping : this.customer.toPaypalShipping(),
 		description : this.description,
 		amount : {
@@ -360,7 +373,7 @@ NTPaypal.Order.prototype.toPurchaseUnit = function()
  */
 NTPaypal.Shop = function(currency_code)
 {
-	if ( !this.currency_code )
+	if ( !currency_code )
 		throw new Error("'currency_code' parameter of 'Shop' constructor not set");
 	
 	this.currency_code = currency_code;
@@ -396,11 +409,14 @@ NTPaypal.Shop.prototype.newItem = function(title, id, quantity, price, tax, desc
  * @param string zipcode
  * @param string city
  * @param string countrycode 2-characters identifying country
+ * @param string email
+ * @param string phone
+ * @param string phone_type May be HOME or MOBILE
  * @return Customer
  */
-NTPaypal.Shop.prototype.newCustomer = function(firstname, surname, address1, address2, zipcode, city, countrycode)
+NTPaypal.Shop.prototype.newCustomer = function(firstname, surname, address1, address2, zipcode, city, countrycode, email, phone, phone_type)
 {
-	return new NTPaypal.Customer(firstname, surname, address1, address2, zipcode, city, countrycode)
+	return new NTPaypal.Customer(firstname, surname, address1, address2, zipcode, city, countrycode, email, phone, phone_type);
 }
 
 
@@ -422,13 +438,26 @@ NTPaypal.Shop.prototype.newOrder = function(cart, customer, shipping, descriptio
 
 
 /**
+ * Create a shopping cart with items
+ *
+ * @param CartItem[] items Array of CartItem objects ; content of shopping cart can be set later with add method instead of this items paremeters
+ */
+NTPaypal.Shop.prototype.newCart = function(items){
+	return new NTPaypal.Cart(items);
+}
+
+
+
+
+
+/**
  * Show Paypal pay-now button for a given order
  *
  * @param Order order Object of class Order containing all details to fullfill payment
  * @param string selector Selector to identify a container in the page to render the button into
  * @return Promise Return a promise resolved when payment is approved, rejected when canceled
  */
-NTPaypal.Shop.prototype.paypalButton(order, selector)
+NTPaypal.Shop.prototype.paypalButton = function(order, selector)
 {
 	// checking parameters
 	if ( !(order instanceof NTPaypal.Order) )
@@ -444,9 +473,21 @@ NTPaypal.Shop.prototype.paypalButton(order, selector)
 			// create order
 			createOrder: function(data, actions) {
 				// Set up the transaction
-				return actions.order.create({
-					purchase_units: [ order.toPurchaseUnit() ]
-				});
+				return actions.order.create(
+					{
+						// data about payer/customer ; used to set fields with relevant data already known
+						payer : {
+							email_address : order.customer.email,
+							phone : {
+								phone_number : { national_number : order.customer.phone },
+								phone_type : order.customer.phone_type
+							}
+						},
+						
+						// shopping cart content
+						purchase_units: [ order.toPurchaseUnit() ]
+					}
+				);
 			},
 
 
