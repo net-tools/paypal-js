@@ -64,7 +64,11 @@ var cust = shop.newCustomer('John', {
 	phone_type : 'MOBILE'
 });
 
-var p1 = shop.newItem('Product 1', 'EAN123456', 1, 12.50, 'PHYSICAL_GOODS', {tax:1.12, description:'Great product 1 here'});
+var p1 = shop.newItem('Product 1', 1, 12.50, 'PHYSICAL_GOODS', {
+		sku : 'EAN123456',
+ 		tax : 1.12, 
+		description : 'Great product 1 here'
+	});
 ```
 
 We create a shopping cart filled with the items (here, only one)

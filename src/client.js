@@ -11,32 +11,29 @@ var NTPaypal = NTPaypal || {};
  * Constructor for a cart item
  *
  * @param string title Short description of product
- * @param string id Any relevant business ID (EAN, SKU, etc.)
  * @param int quantity Quantity purchased
  * @param float price Price for one product (excluding tax)
  * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
  * @param string currency_code Such as EUR, GBP, USD, etc.
- * @param object other Object litteral of non-mandatory parameters : {float tax, string description}
+ * @param object other Object litteral of non-mandatory parameters : {string sku, float tax, string description}
  */
-NTPaypal.CartItem = function(title, id, quantity, price, category, currency_code, other){
+NTPaypal.CartItem = function(title, quantity, price, category, currency_code, other){
 	
 	// normalize other parameter
 	other = other || {};
 	
 	this.title = title;
-	this.id = id;
 	this.quantity = quantity;
 	this.price = price;
 	this.currency_code = currency_code;
 	this.category = category;
 	this.tax = other['tax'] || 0;
 	this.description = other['description'] || '';
+	this.sku = other['sku'] || '';
 	
 	
 	if ( !this.title )
 		throw new Error("'title' parameter of 'CartItem' constructor not set");
-	if ( !this.id )
-		throw new Error("'id' parameter of 'CartItem' constructor not set");
 	if ( !this.quantity )
 		throw new Error("'quantity' parameter of 'CartItem' constructor not set");
 	if ( typeof price == 'undefined' )
@@ -64,7 +61,7 @@ NTPaypal.CartItem.prototype.toPaypalItem = function()
 		tax : {currency_code : this.currency_code, value:this.tax},
 		quantity : this.quantity,
 		description: this.description,
-		sku : this.id,
+		sku : this.sku,
 		category : this.category
 	}
 }
@@ -416,16 +413,15 @@ NTPaypal.Shop = function(currency_code)
  * Create a cart item
  *
  * @param string title Short description of product
- * @param string id Any relevant business ID (EAN, SKU, etc.)
  * @param int quantity Quantity purchased
  * @param float price Price for one product (excluding tax)
  * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
- * @param object other Object litteral of non-mandatory parameters : {float tax, string description}
+ * @param object other Object litteral of non-mandatory parameters : {string sku, float tax, string description}
  * @return CartItem
  */
-NTPaypal.Shop.prototype.newItem = function(title, id, quantity, price, category, other)
+NTPaypal.Shop.prototype.newItem = function(title, quantity, price, category, other)
 {
-	return new NTPaypal.CartItem(title, id, quantity, price, category, this.currency_code, other);
+	return new NTPaypal.CartItem(title, quantity, price, category, this.currency_code, other);
 }
 
 
@@ -486,7 +482,7 @@ NTPaypal.Shop.prototype.expressBuy = function(title, value, category, selector){
 	// calling paypalButton method
 	return this.paypalButton(
 			// building simple order (cart, no customer data, 0 shipping, no description)
-			this.newOrder(this.newCart([this.newItem(title, title, 1, value, category || 'PHYSICAL_GOODS')])),
+			this.newOrder(this.newCart([this.newItem(title, 1, value, category || 'PHYSICAL_GOODS')])),
 
 			// DOM selector
 			selector

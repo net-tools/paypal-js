@@ -102,9 +102,17 @@
 		
 		
 		// create the products
-		var p1 = shop.newItem(v('p1_title'), v('p1_sku'), v('p1_quantity'), v('p1_price'), 'PHYSICAL_GOODS', {tax:v('p1_tax'), description:v('p1_descr')});
+		var p1 = shop.newItem(v('p1_title'), v('p1_quantity'), v('p1_price'), 'PHYSICAL_GOODS', {
+				sku			: v('p1_sku'), 
+				tax			: v('p1_tax'), 
+				description	: v('p1_descr')
+			});
 		if ( v('p2_title') )
-			var p2 = shop.newItem(v('p2_title'), v('p2_sku'), v('p2_quantity'), v('p2_price'), 'DIGITAL_GOODS', {tax:v('p2_tax'), description:v('p2_descr')});
+			var p2 = shop.newItem(v('p2_title'), v('p2_quantity'), v('p2_price'), 'DIGITAL_GOODS', {
+				sku			: v('p2_sku'), 
+				tax			: v('p2_tax'), 
+				description	: v('p2_descr')
+			});
 		else
 			var p2 = null;
 		
