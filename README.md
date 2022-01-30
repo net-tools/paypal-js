@@ -49,7 +49,7 @@ var shop = new NTPaypal.Shop('EUR');
 ```
 
 Then we create the Customer and CartItem objects. Please not that mandatory values are passed as regular parameters to constructors, whereas 
-not required ones are passed through a `other` object litteral parameter.
+not required ones are passed through an `other` object litteral parameter.
 
 ```					
 var cust = shop.newCustomer('John', {
