@@ -14,21 +14,23 @@ var NTPaypal = NTPaypal || {};
  * @param string id Any relevant business ID (EAN, SKU, etc.)
  * @param int quantity Quantity purchased
  * @param float price Price for one product (excluding tax)
- * @param float tax VAT amount
- * @param string description Longer description of item (may be null)
  * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
  * @param string currency_code Such as EUR, GBP, USD, etc.
+ * @param object other Object litteral of non-mandatory parameters : {float tax, string description}
  */
-NTPaypal.CartItem = function(title, id, quantity, price, tax, description, category, currency_code){
+NTPaypal.CartItem = function(title, id, quantity, price, category, currency_code, other){
+	
+	// normalize other parameter
+	other = other || {};
 	
 	this.title = title;
 	this.id = id;
 	this.quantity = quantity;
 	this.price = price;
-	this.tax = tax || 0;
 	this.currency_code = currency_code;
 	this.category = category;
-	this.description = description || '';
+	this.tax = other['tax'] || 0;
+	this.description = other['description'] || '';
 	
 	
 	if ( !this.title )
@@ -39,8 +41,6 @@ NTPaypal.CartItem = function(title, id, quantity, price, tax, description, categ
 		throw new Error("'quantity' parameter of 'CartItem' constructor not set");
 	if ( typeof price == 'undefined' )
 		throw new Error("'price' parameter of 'CartItem' constructor not set");
-	if ( typeof tax == 'undefined' )
-		throw new Error("'tax' parameter of 'CartItem' constructor not set");
 	if ( typeof category == 'undefined' )
 		throw new Error("'category' parameter of 'CartItem' constructor not set");
 	if ( !this.currency_code )
@@ -79,33 +79,36 @@ NTPaypal.CartItem.prototype.toPaypalItem = function()
 /**
  * Constructor for a customer object, providing details about shipping
  *
+ * - Countrycode is a 2-characters string identify country
+ * - Phone_type may be set to 'HOME' or 'MOBILE'
+ *
  * @param string firstname
- * @param string surname
- * @param string address1
- * @param string address2
- * @param string zipcode
- * @param string city
- * @param string countrycode 2-characters identifying country
- * @param string email 
- * @param string phone
- * @param string phone_type May be HOME or MOBILE
+ * @param object other Object litteral with non-mandatory parameters {string surname, string address1, string address2, string zipcode, string city, string countrycode, string email, string phone, string phone_type}
  */
-NTPaypal.Customer = function(firstname, surname, address1, address2, zipcode, city, countrycode, email, phone, phone_type)
+NTPaypal.Customer = function(firstname, other)
 {
 	if ( !firstname )
 		throw new Error("'firstname' parameter of 'Customer' constructor not set");
+	if ( (other['phone'] && !other['phone_type']) || (!other['phone'] && other['phone_type']) )
+		throw new Error("'other.phone' and 'other.phone_type' parameters of 'Customer' constructor not set");
+	if ( other['city'] || other['zipcode'] || other['countrycode'] )
+	{
+		if ( !other['city'] || !other['zipcode'] || !other['countrycode'] )
+			throw new Error("'other.city', 'other.zipcode' and 'other.countrycode' parameters of 'Customer' constructor not set");
+	}
 	
+	var other = other || {};
 	
 	this.firstname = firstname;
-	this.surname = surname || '';
-	this.address1 = address1 || '';
-	this.address2 = address2 || '';
-	this.zipcode = zipcode || '';
-	this.city = city || '';
-	this.countrycode = countrycode || '';
-	this.email = email;
-	this.phone = phone;
-	this.phone_type = phone_type;
+	this.surname = other['surname'] || '';
+	this.address1 = other['address1'] || '';
+	this.address2 = other['address2'] || '';
+	this.zipcode = other['zipcode'] || '';
+	this.city = other['city'] || '';
+	this.countrycode = other['countrycode'] || '';
+	this.email = other['email'] || '';
+	this.phone = other['phone'] || '';
+	this.phone_type = other['phone_type'] || '';
 }
 
 
@@ -116,17 +119,25 @@ NTPaypal.Customer = function(firstname, surname, address1, address2, zipcode, ci
  * @return object Returns a litteral object to be used as shipping_detail value in Paypal requests
  */
 NTPaypal.Customer.prototype.toPaypalShipping = function() {
-	return {
-		name : { full_name : this.firstname + ' ' + this.surname },
-		type : 'SHIPPING',
-		address : {
+	
+	var ret = {
+		name : { full_name : (this.firstname + ' ' + this.surname).trim() },
+		type : 'SHIPPING'
+	};
+	
+
+	// append address if city/zipcode/country are set
+	if ( this.city && this.zipcode && this.countrycode )
+		ret.address = {
 			address_line_1 : this.address1,
 			address_line_2 : this.address2,
 			admin_area_2 : this.city.toUpperCase(),
 			postal_code : this.zipcode,
 			country_code : this.countrycode
-		}
-	}
+		};
+	
+	
+	return ret;
 }
 
 
@@ -140,7 +151,7 @@ NTPaypal.Customer.prototype.toPaypalShipping = function() {
 /**
  * Constructor of a shopping cart 
  *
- * @param CartItem[] items Array of CartItem objects ; content of shopping cart can be set later with add method instead of this items paremeters
+ * @param null|CartItem[] items Array of CartItem objects ; content of shopping cart can be set later with add method instead of this items paremeters
  */
 NTPaypal.Cart = function(items){
 	
@@ -305,28 +316,31 @@ NTPaypal.Cart.prototype.toPaypalItems = function()
  * Order object
  *
  * @param Cart Object of class Cart
- * @param Customer Object of class Customer
- * @param float shipping Shipping cost for order
- * @param string description Short description of order (may be null)
  * @param string currency_code
+ * @param object other Object litteral with non-mandatory parameters {Customer customer, float shipping, string description}
  */
-NTPaypal.Order = function(cart, customer, shipping, description, currency_code){
+NTPaypal.Order = function(cart, currency_code, other){
 
+	// normalize 'other' parameter
+	var other = other || {};
+	
+		
 	// checking parameters
 	if ( !(cart instanceof NTPaypal.Cart) )
 		throw new TypeError("'cart' parameter of 'Order' constructor is not an instance of 'Cart'");
 	
-	if ( (typeof(customer)=='object') && !(customer instanceof NTPaypal.Customer) )
-		throw new TypeError("'customer' parameter of 'Order' constructor is not an instance of 'Customer'");
+	if ( (typeof(other['customer'])=='object') && !(other['customer'] instanceof NTPaypal.Customer) )
+		throw new TypeError("'other.customer' parameter of 'Order' constructor is not an instance of 'Customer'");
 
 	if ( !currency_code )
 		throw new Error("'currency_code' parameter of 'Order' constructor not set");
 	
-	this.customer = customer;
+	
+	this.customer = other['customer'] || null;
 	this.cart = cart;	
 	this.currency_code = currency_code;
-	this.shipping = shipping || 0;
-	this.description = description;
+	this.shipping = other['shipping'] || 0;
+	this.description = other['description'] || '';
 }
 
 
@@ -352,6 +366,7 @@ NTPaypal.Order.prototype.toPurchaseUnit = function()
 	
 	
 	
+	// prepare object litteral to be returned ; first adding always defined values
 	var punit = {
 		items : content,
 		description : this.description,
@@ -404,14 +419,13 @@ NTPaypal.Shop = function(currency_code)
  * @param string id Any relevant business ID (EAN, SKU, etc.)
  * @param int quantity Quantity purchased
  * @param float price Price for one product (excluding tax)
- * @param float tax VAT amount
- * @param string description Longer description of item (may be null)
  * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
+ * @param object other Object litteral of non-mandatory parameters : {float tax, string description}
  * @return CartItem
  */
-NTPaypal.Shop.prototype.newItem = function(title, id, quantity, price, tax, description, category)
+NTPaypal.Shop.prototype.newItem = function(title, id, quantity, price, category, other)
 {
-	return new NTPaypal.CartItem(title, id, quantity, price, tax, description, category, this.currency_code);
+	return new NTPaypal.CartItem(title, id, quantity, price, category, this.currency_code, other);
 }
 
 
@@ -419,21 +433,16 @@ NTPaypal.Shop.prototype.newItem = function(title, id, quantity, price, tax, desc
 /**
  * Create a customer object, providing details about shipping
  *
+ * - Countrycode is a 2-characters string identify country
+ * - Phone_type may be set to 'HOME' or 'MOBILE'
+ *
  * @param string firstname
- * @param string surname
- * @param string address1
- * @param string address2
- * @param string zipcode
- * @param string city
- * @param string countrycode 2-characters identifying country
- * @param string email
- * @param string phone
- * @param string phone_type May be HOME or MOBILE
+ * @param object other Object litteral with non-mandatory parameters {string surname, string address1, string address2, string zipcode, string city, string countrycode, string email, string phone, string phone_type}
  * @return Customer
  */
-NTPaypal.Shop.prototype.newCustomer = function(firstname, surname, address1, address2, zipcode, city, countrycode, email, phone, phone_type)
+NTPaypal.Shop.prototype.newCustomer = function(firstname, other)
 {
-	return new NTPaypal.Customer(firstname, surname, address1, address2, zipcode, city, countrycode, email, phone, phone_type);
+	return new NTPaypal.Customer(firstname, other);
 }
 
 
@@ -442,14 +451,12 @@ NTPaypal.Shop.prototype.newCustomer = function(firstname, surname, address1, add
  * Create a new Order object
  *
  * @param Cart Object of class Cart
- * @param null|Customer Object of class Customer or null to ignore customer data (the Paypal window won't be preset with customer data)
- * @param float shipping Shipping cost for order
- * @param string description Short description of order (may be null)
+ * @param object other Object litteral with non-mandatory parameters {Customer customer, float shipping, string description}
  * @return Order
  */
-NTPaypal.Shop.prototype.newOrder = function(cart, customer, shipping, description)
+NTPaypal.Shop.prototype.newOrder = function(cart, other)
 {
-	return new NTPaypal.Order(cart, customer, shipping, description, this.currency_code);
+	return new NTPaypal.Order(cart, this.currency_code, other);
 }
 
 
@@ -467,7 +474,7 @@ NTPaypal.Shop.prototype.newCart = function(items){
 
 
 /**
- * Quickly create required objects and show Paypal "buy now" buttons
+ * Quickly create required objects and show Paypal "buy now" buttons (with some values being forced to default values : tax = 0, description = '')
  *
  * @param string title Short description of item purchased
  * @param float value Amount to ask payment for
@@ -479,7 +486,7 @@ NTPaypal.Shop.prototype.expressBuy = function(title, value, category, selector){
 	// calling paypalButton method
 	return this.paypalButton(
 			// building simple order (cart, no customer data, 0 shipping, no description)
-			this.newOrder(this.newCart([this.newItem(title, title, 1, value, 0, '', category || 'PHYSICAL_GOODS')])),
+			this.newOrder(this.newCart([this.newItem(title, title, 1, value, category || 'PHYSICAL_GOODS')])),
 
 			// DOM selector
 			selector
@@ -497,66 +504,73 @@ NTPaypal.Shop.prototype.expressBuy = function(title, value, category, selector){
  */
 NTPaypal.Shop.prototype.paypalButton = function(order, selector)
 {
-	// checking parameters
-	if ( !(order instanceof NTPaypal.Order) )
-		throw new TypeError("'order' parameter of 'paypalButton' function is not an instance of 'Order'");
-	if ( !selector )
-		throw new Error("'selector' parameter of 'paypalButton' function not set");
-		
-	
-	
-	// creating request with relevant objects
-	var req = {};
-	req.purchase_units = [ order.toPurchaseUnit() ];
-	
-	
-	
-	// maybe the customer is not set (no default values in Paypal window)
-	if ( order.customer )
+	try
 	{
-		if ( order.customer.email )
+		// checking parameters
+		if ( !(order instanceof NTPaypal.Order) )
+			throw new TypeError("'order' parameter of 'paypalButton' function is not an instance of 'Order'");
+		if ( !selector )
+			throw new Error("'selector' parameter of 'paypalButton' function not set");
+
+
+
+		// creating request with relevant objects
+		var req = {};
+		req.purchase_units = [ order.toPurchaseUnit() ];
+
+
+
+		// maybe the customer is not set (no default values in Paypal window)
+		if ( order.customer )
 		{
-			req.payer = req.payer || {};
-			req.payer.email_address = order.customer.email;
+			if ( order.customer.email )
+			{
+				req.payer = req.payer || {};
+				req.payer.email_address = order.customer.email;
+			}
+
+			if ( order.customer.phone && order.customer.phone_type )
+			{
+				req.payer = req.payer || {};
+				req.payer.phone = {
+						phone_number : { national_number : order.customer.phone },
+						phone_type : order.customer.phone_type
+					};
+			}
 		}
 
-		if ( order.customer.phone )
-		{
-			req.payer = req.payer || {};
-			req.payer.phone = {
-					phone_number : { national_number : order.customer.phone },
-					phone_type : order.customer.phone_type
-				};
-		}
+
+		// create a Promise to be returned to caller ; resolved when payment is approved, rejected if canceled
+		return new Promise(function(resolve, reject){
+			paypal.Buttons({
+
+				// create order
+				createOrder: function(data, actions) {
+					// Set up the transaction
+					return actions.order.create(req);
+				},
+
+
+				// capture the payment ; resolve method will be called with order data object litteral ;
+				// access transaction id with orderData.purchase_units[0].payments.captures[0].id;
+				onApprove: function(data, actions) {
+					return actions.order.capture().then(resolve);
+				},		
+
+
+				// react to cancel (reject function will be passed an order ID)
+				onCancel : reject,
+
+
+				// react to error
+				onError : reject
+
+			}).render(selector);		
+		});
 	}
-	
-	
-	// create a Promise to be returned to caller ; resolved when payment is approved, rejected if canceled
-	return new Promise(function(resolve, reject){
-		paypal.Buttons({
-			
-			// create order
-			createOrder: function(data, actions) {
-				// Set up the transaction
-				return actions.order.create(req);
-			},
-
-
-			// capture the payment ; resolve method will be called with order data object litteral ;
-			// access transaction id with orderData.purchase_units[0].payments.captures[0].id;
-			onApprove: function(data, actions) {
-				return actions.order.capture().then(resolve);
-			},		
-			
-			
-			// react to cancel (reject function will be passed an order ID)
-			onCancel : reject,
-			
-			
-			// react to error
-			onError : reject
-			
-		}).render(selector);		
-	});
+	catch( err )
+	{
+		return Promise.reject(err);
+	}
 }
 

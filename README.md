@@ -19,14 +19,14 @@ var shop = new NTPaypal.Shop('EUR');
 shop.expressBuy('product title', 10.50, 'PHYSICAL_GOODS', '#selector_here')
 ```
  
-The `expressBuy` method expects a title, a amount, a category ('PHYSICAL_GOODS', 'DIGITAL_GOODS', 'DONATION') and a selector to 
-draw the Paypal buttons into. Category parameters can be omitted (null).
+The `expressBuy` method expects a title, an amount, a category ('PHYSICAL_GOODS', 'DIGITAL_GOODS', 'DONATION') and a selector to 
+draw the Paypal buttons into. Category parameters can be omitted (null) ; a Promise object is returned, and is resolved when the payment is done (otherwise, the promise is rejected).
 
- 
+See below for an example about how to use Promises. 
  
  
 
-## How to use (with cart support)
+## How to use (complete process, with cart support)
 
 This library defines several Javasript objects to manage products, customer details, shopping cart, order and makes it possible to launch a Paypal payment window.
 
@@ -48,11 +48,23 @@ First, we create a Shop object with desired currency ; the Shop object which ser
 var shop = new NTPaypal.Shop('EUR');
 ```
 
-Then we create the Customer and CartItem objects
+Then we create the Customer and CartItem objects. Please not that mandatory values are passed as regular parameters to constructors, whereas 
+not required ones are passed through a `other` object litteral parameter.
 
 ```					
-var cust = shop.newCustomer('John', 'Doe', '1 Kensington Avenue', 'Building B', '75000', 'PARIS', 'FR', 'john.doe@gmail.com', '0601020304', 'MOBILE');
-var p1 = shop.newItem('Product 1', 'EAN123456', 1, 12.50, 0, 'Great product 1 here');
+var cust = shop.newCustomer('John', {
+	surname : 'doe',
+	address1 : '1 Kensington Avenue', 
+	address2 : 'Building B', 
+	zipcode : '75000', 
+	city : 'PARIS', 
+	countrycode : 'FR'
+	email : 'john.doe@gmail.com', 
+	phone : '0601020304',
+	phone_type : 'MOBILE'
+});
+
+var p1 = shop.newItem('Product 1', 'EAN123456', 1, 12.50, 'PHYSICAL_GOODS', {tax:1.12, description:'Great product 1 here'});
 ```
 
 We create a shopping cart filled with the items (here, only one)
