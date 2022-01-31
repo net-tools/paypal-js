@@ -782,7 +782,7 @@ NTPaypal.Sale = function(shop){
 NTPaypal.Sale.prototype.to = function (customer){
 
 	// checking parameter
-	if ( !(customer instanceof NTPaypal.Customer) )
+	if ( customer && !(customer instanceof NTPaypal.Customer) )
 		throw new TypeError("'customer' parameter of 'to' method is not an instance of 'Customer'");
 
 	this.customer = customer;
@@ -830,6 +830,9 @@ NTPaypal.Sale.prototype.payButtonsInside = function (selector){
 	// checking parameter
 	if ( !(typeof (selector) == 'string') )
 		throw new TypeError("'selector' parameter of 'payButtonsInside' method is not a string");
+
+	if ( !selector )
+		throw new TypeError("'selector' parameter of 'payButtonsInside' method is not set");
 
 	return new NTPaypal.Payment(selector, this);
 }
