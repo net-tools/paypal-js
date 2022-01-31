@@ -174,17 +174,17 @@
 		var shop = new NTPaypal.Shop('EUR');
 		
 		shop.sell(shop.product('Sample product 2', 10, 5.50, 'DIGITAL_GOODS').setSku('id_2').withDescription('Description of product 2'))
-			.to(shop.customer()
-					.named('Johnny', 'Donny')
-					.living('123, 3rd Avenue')
-					.in('75000', 'PARIS', 'FR')
-					.withEmail('johnny.donny@gmail.com')
-					.withPhone('0601020304', 'MOBILE')
-			)
-			.withShipping(14)
-			.withDescription('Shopping cart built with fluent API')
-			.payInside('#paypalbtns')
-			.set('shipping_preference', 'NO_SHIPPING')
+				.to(shop.customer()
+						.named('Johnny', 'Donny')
+						.living('123, 3rd Avenue')
+						.in('75000', 'PARIS', 'FR')
+						.withEmail('johnny.donny@gmail.com')
+						.withPhone('0601020304', 'MOBILE')
+				)
+				.withShipping(14)
+				.withDescription('Shopping cart built with fluent API')
+			.payButtonsInside('#paypalbtns')
+				.set('shipping_preference', 'NO_SHIPPING')
 			.execute();
 	}
 		

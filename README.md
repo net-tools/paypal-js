@@ -95,7 +95,7 @@ shop.sell(
 ```
  
 Here, the Sale object is ready ; please not that all fluent API calls expect `sell` and its parameter are not mandatory.
-To prepare the Paypal buttons rendering, we call the `payInside` method (with target selector in DOM tree), which prepares a Payment object, on which we
+To prepare the Paypal buttons rendering, we call the `payButtonsInside` method (with target selector in DOM tree), which prepares a Payment object, on which we
 call its `execute` method to display buttons.
 
 ```
@@ -115,7 +115,7 @@ shop.sell(
 			.withEmail('john.doe@gmail.com')
 			.withPhone('0601020304', 'MOBILE')
 	)
-	.payInside('#div_paypal_here')
+	.payButtonsInside('#div_paypal_here')
 	.execute();
 ```
  
@@ -138,7 +138,7 @@ shop.sell(
 			.withEmail('john.doe@gmail.com')
 			.withPhone('0601020304', 'MOBILE')
 	)
-	.payInside('#div_paypal_here')
+	.payButtonsInside('#div_paypal_here')
 	.set('shipping_preference', 'NO_SHIPPING')
 	.execute();
 ```

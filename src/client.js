@@ -825,11 +825,11 @@ NTPaypal.Sale.prototype.withDescription = function (description){
  * @param string selector Selector to identify a container in the page to render the button into
  * @return Payment Returns a fluent object to deal with application context before displaying Paypal buttons
  */
-NTPaypal.Sale.prototype.payInside = function (selector){
+NTPaypal.Sale.prototype.payButtonsInside = function (selector){
 
 	// checking parameter
 	if ( !(typeof (selector) == 'string') )
-		throw new TypeError("'selector' parameter of 'payInside' method is not a string");
+		throw new TypeError("'selector' parameter of 'payButtonsInside' method is not a string");
 
 	return new NTPaypal.Payment(selector, this);
 }
