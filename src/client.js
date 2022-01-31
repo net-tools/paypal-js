@@ -25,11 +25,11 @@ NTPaypal.CartItem = function(title, quantity, price, category, currency_code, ot
 	this.title = title;
 	this.quantity = quantity;
 	this.price = price;
-	this.currency_code = currency_code;
 	this.category = category;
 	this.tax = other['tax'] || 0;
 	this.description = other['description'] || '';
 	this.sku = other['sku'] || '';
+	this.currency_code = currency_code;
 	
 	
 	if ( !this.title )
@@ -68,6 +68,47 @@ NTPaypal.CartItem.prototype.toPaypalItem = function()
 
 
 
+/**
+ * Fluent method to set non-mandatory parameter tax
+ *
+ * @param float tax
+ * @return CartItem
+ */
+NTPaypal.CartItem.prototype.setTax = function(tax)
+{
+	this.tax = tax;
+	return this;
+}
+
+
+
+/**
+ * Fluent method to set non-mandatory parameter sku
+ *
+ * @param string sku
+ * @return CartItem
+ */
+NTPaypal.CartItem.prototype.setSku = function(sku)
+{
+	this.sku = sku;
+	return this;
+}
+
+
+
+/**
+ * Fluent method to set non-mandatory parameter description
+ *
+ * @param string description
+ * @return CartItem
+ */
+NTPaypal.CartItem.prototype.withDescription = function(description)
+{
+	this.description = description;
+	return this;
+}
+
+
 
 // ----------------------------------------------------------------------
 
@@ -84,6 +125,9 @@ NTPaypal.CartItem.prototype.toPaypalItem = function()
  */
 NTPaypal.Customer = function(firstname, other)
 {
+	var other = other || {};
+
+	
 	if ( !firstname )
 		throw new Error("'firstname' parameter of 'Customer' constructor not set");
 	if ( (other['phone'] && !other['phone_type']) || (!other['phone'] && other['phone_type']) )
@@ -94,7 +138,6 @@ NTPaypal.Customer = function(firstname, other)
 			throw new Error("'other.city', 'other.zipcode' and 'other.countrycode' parameters of 'Customer' constructor not set");
 	}
 	
-	var other = other || {};
 	
 	this.firstname = firstname;
 	this.surname = other['surname'] || '';
@@ -137,6 +180,80 @@ NTPaypal.Customer.prototype.toPaypalShipping = function() {
 	return ret;
 }
 
+
+
+/**
+ * Fluent method to set firstname, surname
+ *
+ * @param string firstname
+ * @param string surname
+ * @return Customer Returns this
+ */
+NTPaypal.Customer.prototype.named = function(firstname, surname){
+	this.firstname = firstname;
+	this.surname = surname;
+	return this;
+}
+
+
+
+/**
+ * Fluent method to set address1 and address2
+ *
+ * @param string address1
+ * @param string address2
+ * @return Customer Returns this
+ */
+NTPaypal.Customer.prototype.living = function(address1, address2){
+	this.address1 = address1;
+	this.address2 = address2;
+	return this;
+}
+
+
+
+/**
+ * Fluent method to set zipcode, city, countrycode
+ *
+ * @param string zipcode
+ * @param string city
+ * @param string countrycode
+ * @return Customer Returns this
+ */
+NTPaypal.Customer.prototype.in = function(zipcode, city, countrycode){
+	this.zipcode = zipcode;
+	this.city = city;
+	this.countrycode = countrycode;
+	return this;
+}
+
+
+
+/**
+ * Fluent method to set phone / phone_type
+ *
+ * @param string phone
+ * @param string phone_type (MOBILE or HOME)
+ * @return Customer Returns this
+ */
+NTPaypal.Customer.prototype.withPhone = function(phone, phone_type){
+	this.phone = phone;
+	this.phone_type = phone_type;
+	return this;
+}
+
+
+
+/**
+ * Fluent method to set email address
+ *
+ * @param string email
+ * @return Customer Returns this
+ */
+NTPaypal.Customer.prototype.withEmail = function(email){
+	this.email = email;
+	return this;
+}
 
 
 
@@ -327,6 +444,9 @@ NTPaypal.Order = function(cart, currency_code, other){
 		throw new TypeError("'cart' parameter of 'Order' constructor is not an instance of 'Cart'");
 	
 	if ( (typeof(other['customer'])=='object') && !(other['customer'] instanceof NTPaypal.Customer) )
+		throw new TypeError("'other.customer' parameter of 'Order' constructor is not an instance of 'Customer'");
+	
+	if ( other['customer'] && !(typeof(other['customer'])=='object') )
 		throw new TypeError("'other.customer' parameter of 'Order' constructor is not an instance of 'Customer'");
 
 	if ( !currency_code )
@@ -574,4 +694,237 @@ NTPaypal.Shop.prototype.paypalButtons = function(order, selector, application_co
 		return Promise.reject(err);
 	}
 }
+
+
+
+
+/**
+ * Create a CartItem object through a fluent method
+ *
+ * Same parameters as NTPaypal.Shop.newItem method
+ *
+ * @param string title Short description of product
+ * @param int quantity Quantity purchased
+ * @param float price Price for one product (excluding tax)
+ * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
+ * @param object other Object litteral of non-mandatory parameters : {string sku, float tax, string description}
+ * @return CartItem
+ */
+NTPaypal.Shop.prototype.product = NTPaypal.Shop.prototype.newItem;
+
+
+
+/**
+ * Create a Customer object through a fluent method
+ *
+ * On the returned Customer object, call `named`, `living`, `in`, `withPhone` and `withEmail` fluent methods to set data
+ *
+ * @return Customer
+ */
+NTPaypal.Shop.prototype.customer = function()
+{
+	return new NTPaypal.Customer('no name');
+}
+
+
+
+/**
+ * Provides a method to start a fluent chain
+ *
+ * @param CartItem|array items Object of class CartItem or array of CartItem objects to begin the fluent chain with
+ * @return Sale Returns a fluent Sale object with appropriate methods to set customer details, shipping and description data
+ */
+NTPaypal.Shop.prototype.sell = function(items)
+{
+	// if we have a single CartItem object, convert it to an array
+	if ( (typeof(items) == 'object') && (items instanceof NTPaypal.CartItem) )
+		items = [items];
+
+	// checking we have an array, otherwise, it's an error
+	if ( !((typeof(items) == 'object') && (items.constructor.name == 'Array')) )
+		throw new TypeError("'items' parameter of 'sell' method is not an array");
+	
+	
+	// create the fluent Sale object, linked to this shop, and store a newly created Cart object
+	var sale = new NTPaypal.Sale(this);
+	sale.cart = this.newCart(items);
+	
+	return sale;
+}
+
+
+
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Constructor for fluent object return by Shop.sell ; the object stores the cart, customer and options data
+ *
+ * @param Shop shop Object reference to the related Shop object
+ */
+NTPaypal.Sale = function(shop){
+	this.shop = shop;
+	this.cart = null;
+	this.customer = null;
+	this.shipping = 0;
+	this.description = '';	
+}
+
+
+
+/** 
+ * Provides a fluent method to set the customer linked to the sale object
+ *
+ * @param Customer customer 
+ * @return Sale Return this
+ */
+NTPaypal.Sale.prototype.to = function (customer){
+
+	// checking parameter
+	if ( !(customer instanceof NTPaypal.Customer) )
+		throw new TypeError("'customer' parameter of 'to' method is not an instance of 'Customer'");
+
+	this.customer = customer;
+	return this;
+}
+
+
+
+/** 
+ * Provides a fluent method to set the shipping cost linked to the sale object
+ *
+ * @param float cost
+ * @return Sale Return this
+ */
+NTPaypal.Sale.prototype.withShipping = function (cost){
+
+	this.shipping = cost;
+	return this;
+}
+
+
+
+/** 
+ * Provides a fluent method to set the description linked to the sale object
+ *
+ * @param string description
+ * @return Sale Return this
+ */
+NTPaypal.Sale.prototype.withDescription = function (description){
+
+	this.description = description;
+	return this;
+}
+
+
+
+/** 
+ * Provides a fluent method to close the order building process ; we return a Payment fluent object to pass control to buttons and app context building
+ *
+ * @param string selector Selector to identify a container in the page to render the button into
+ * @return Payment Returns a fluent object to deal with application context before displaying Paypal buttons
+ */
+NTPaypal.Sale.prototype.payInside = function (selector){
+
+	// checking parameter
+	if ( !(typeof (selector) == 'string') )
+		throw new TypeError("'selector' parameter of 'payInside' method is not a string");
+
+	return new NTPaypal.Payment(selector, this);
+}
+
+
+
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Constructor for object used in a fluent pattern to store payment details after order created and before buttons are displayed 
+ *
+ * @param string selector Id of DOM object to display Paypal buttons into
+ * @param Sale sale Sale fluent object
+ */
+NTPaypal.Payment = function(selector, sale){
+	this.sale = sale;
+	this.selector = selector;
+	this.application_context = null;
+}
+
+
+
+/**
+ * Fluent method to set one application context parameter
+ *
+ * @param string key
+ * @param string value
+ * @return Payment Returns this
+ */
+NTPaypal.Payment.prototype.set = function(key, value) {
+	
+	// checking parameters
+	if ( !key || typeof(key) != 'string' )
+		throw new TypeError("'key' parameter of 'set' method is not set or not of type 'string'");
+		
+	this.application_context = this.application_context || {};
+	this.application_context[key] = value;
+	return this;
+}
+
+
+
+/**
+ * Fluent method to set application context parameters in one call
+ *
+ * @param object
+ * @return Payment Returns this
+ */
+NTPaypal.Payment.prototype.withApplicationContext = function(values) {
+	
+	// checking parameters
+	if ( !(typeof values == 'object') )
+		throw new TypeError("'values' parameter of 'withApplicationContext' method is not an object");
+		
+	this.application_context = values;
+	return this;
+}
+
+
+
+/**
+ * Fluent method to close bulding buttons process
+ *
+ * @return Promise Return a promise resolved when payment is approved, rejected when canceled
+ */
+NTPaypal.Payment.prototype.execute = function() {
+	
+	// prepare order non-mandatory parameters
+	var orderData = {};
+	if ( this.sale.customer )
+		orderData.customer = this.sale.customer;
+	if ( this.sale.shipping )
+		orderData.shipping = this.sale.shipping;
+	if ( this.sale.description )
+		orderData.description = this.sale.description;
+	
+	
+	// display paypal buttons
+	return this.sale.shop.paypalButtons(
+			
+			// creating the order object
+			this.sale.shop.newOrder(this.sale.cart, orderData),
+		
+			
+			// selector
+			this.selector,
+		
+		
+			// application_context
+			this.application_context		
+		);
+}
+
+
+
 

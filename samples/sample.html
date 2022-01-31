@@ -58,7 +58,7 @@
 		var PAYPAL_SCRIPT = 'https://www.paypal.com/sdk/js?currency=EUR&client-id=' + document.getElementById('paypal_client_id').value;
 		var script = document.createElement('script');
 		script.setAttribute('src', PAYPAL_SCRIPT);
-		script.onload = function(){ document.getElementById('btn_validate').disabled = document.getElementById('btn_express').disabled = false; }
+		script.onload = function(){ document.getElementById('btn_validate').disabled = document.getElementById('btn_express').disabled = document.getElementById('btn_fluent').disabled = false; }
 		document.head.appendChild(script);
 		
 		
@@ -163,6 +163,33 @@
 		
 		
 		
+	function fluent()
+	{
+		// reset buttons
+		document.getElementById('paypalbtns').innerHTML = "";
+		document.getElementById('log').value = '';
+		
+		
+		// create shop and set currency code for all API calls
+		var shop = new NTPaypal.Shop('EUR');
+		
+		shop.sell(shop.product('Sample product 2', 10, 5.50, 'DIGITAL_GOODS').setSku('id_2').withDescription('Description of product 2'))
+			.to(shop.customer()
+					.named('Johnny', 'Donny')
+					.living('123, 3rd Avenue')
+					.in('75000', 'PARIS', 'FR')
+					.withEmail('johnny.donny@gmail.com')
+					.withPhone('0601020304', 'MOBILE')
+			)
+			.withShipping(14)
+			.withDescription('Shopping cart built with fluent API')
+			.payInside('#paypalbtns')
+			.set('shipping_preference', 'NO_SHIPPING')
+			.execute();
+	}
+		
+		
+		
 	function express()
 	{
 		// reset buttons
@@ -240,7 +267,8 @@
 	<div id="actions">
 		<label><input type="checkbox" value="1" id="no_shipping">No shipping</label>
 		<input type="button" value="Validate shopping cart" onclick="go();" id="btn_validate" disabled> 
-		<input type="button" value="Express buy 10€ (no cart)" onclick="express();" id="btn_express" disabled> (please set client-ID first above)
+		<input type="button" value="Express buy 10€ (no cart)" onclick="express();" id="btn_express" disabled> 
+		<input type="button" value="69€ cart with fluent API" onclick="fluent();" id="btn_fluent" disabled> (please set client-ID first above)
 	</div>
 	
 	<div id="paypalbtns"></div>

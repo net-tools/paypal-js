@@ -24,10 +24,131 @@ draw the Paypal buttons into. Category parameters can be omitted (null) ; a Prom
 done (otherwise, the promise is rejected).
 
 See below for an example about how to use Promises. 
+
+
+
+
+
+
+## How to use (complete process, with cart support and fluent API)
+
+For more complex situations, such as buying several products, dealing with shipping cost, etc. we have to deal with other objects.
+A way to do that is to use the programmatic API (see next chapter below), through creating Customer, Cart and Order objects before 
+calling the `paypalButtons` method to initiate the payment.
+
+Another way to create the required data is to use the fluent API provided
+
+
+### Setting up Paypal script
+
+First, the Paypal library must be included in a script tag (replace XXXXXX with your paypal client-ID) :
+```
+<script src="https://www.paypal.com/sdk/js?currency=EUR&client-id=XXXXXX"></script>
+```
+
+### Use fluent API
+
+First, we create a Shop object with desired currency ; the Shop object which serves as a factory to build other required objects :
+
+```
+var shop = new NTPaypal.Shop('EUR');
+```
+
+Then, we begin with fluent API, starting with `sell` method. It accepts a CartItem object (or array of objects) to represent the items purchased.
+The CartItem may be created in a programmatic way or rather with the fluent API provided with `Shop.product` method (having title, quantity, cost and category parameters)
+
+```
+shop.sell(shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS'))
+```
+
+Then, we use CartItem fluent methods if needed :
+ 
+```
+shop.sell(
+		shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS')
+				.setTax(12)
+				.withDescription('Fantastic product here')
+				.setSku('EANXXXXXXX')
+	)
+```
+
+The `sell` method returns a Sale object providing several fluent methods (`to`, `withShipping`, `withDescription`) making it possible to
+chain calls to specify customer, shipping cost and description.
+
+```
+shop.sell(
+		shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS')
+				.setTax(12)
+				.withDescription('Fantastic product here')
+				.setSku('EANXXXXXXX')
+	)	
+	.withShipping(32)
+	.withDescription('Order received, thanks')
+	.to(
+		shop.customer()
+			.named('John', 'Doe'),
+			.living('123, fifth Avenue')
+			.in('75000', 'PARIS', 'FR')
+			.withEmail('john.doe@gmail.com')
+			.withPhone('0601020304', 'MOBILE')
+	)
+```
+ 
+Here, the Sale object is ready ; please not that all fluent API calls expect `sell` and its parameter are not mandatory.
+To prepare the Paypal buttons rendering, we call the `payInside` method (with target selector in DOM tree), which prepares a Payment object, on which we
+call its `execute` method to display buttons.
+
+```
+shop.sell(
+		shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS')
+				.setTax(12)
+				.withDescription('Fantastic product here')
+				.setSku('EANXXXXXXX')
+	)	
+	.withShipping(32)
+	.withDescription('Order received, thanks')
+	.to(
+		shop.customer()
+			.named('John', 'Doe'),
+			.living('123, fifth Avenue')
+			.in('75000', 'PARIS', 'FR')
+			.withEmail('john.doe@gmail.com')
+			.withPhone('0601020304', 'MOBILE')
+	)
+	.payInside('#div_paypal_here')
+	.execute();
+```
+ 
+If some Paypal application context parameters are required, they can be set thanks to the Payment object which defines `set` and `withApplicationContext` methods :
+
+```
+shop.sell(
+		shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS')
+				.setTax(12)
+				.withDescription('Fantastic product here')
+				.setSku('EANXXXXXXX')
+	)	
+	.withShipping(32)
+	.withDescription('Order received, thanks')
+	.to(
+		shop.customer()
+			.named('John', 'Doe'),
+			.living('123, fifth Avenue')
+			.in('75000', 'PARIS', 'FR')
+			.withEmail('john.doe@gmail.com')
+			.withPhone('0601020304', 'MOBILE')
+	)
+	.payInside('#div_paypal_here')
+	.set('shipping_preference', 'NO_SHIPPING')
+	.execute();
+```
+
+The `sell` method returns a Promise which is resolved when the payment is done. 
+ 
  
  
 
-## How to use (complete process, with cart support)
+## How to use (complete process, with cart support, programmatic API)
 
 This library defines several Javasript objects to manage products, customer details, shopping cart, order and makes it possible to launch a Paypal payment window.
 
