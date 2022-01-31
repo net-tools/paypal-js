@@ -488,7 +488,6 @@ NTPaypal.Order.prototype.toPurchaseUnit = function()
 	var punit = {
 		items : content,
 		description : this.description,
-		custom_id : this.custom_id,
 		amount : {
 			currency_code : this.currency_code,
 			value : item_total + tax_total + this.shipping,
@@ -504,6 +503,11 @@ NTPaypal.Order.prototype.toPurchaseUnit = function()
 	// if customer is known, adding it to request
 	if ( this.customer )
 		punit.shipping = this.customer.toPaypalShipping();
+	
+	
+	// if custom_id set
+	if ( this.custom_id )
+		punit.custom_id = this.custom_id;	
 	
 	
 	// return purchase_unit struct : items, shipping details (customer address), total amount with breakdown (amount w/o VAT, total VAT, shipping cost)
