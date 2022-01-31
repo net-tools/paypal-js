@@ -478,9 +478,9 @@ NTPaypal.Shop.prototype.newCart = function(items){
  * @param string selector Selector to identify a container in the page to render the button into
  * @return Promise Return a promise resolved when payment is approved, rejected when canceled
  */
-NTPaypal.Shop.prototype.expressBuy = function(title, value, category, selector){
+NTPaypal.Shop.prototype.expressButtons = function(title, value, category, selector){
 	// calling paypalButton method
-	return this.paypalButton(
+	return this.paypalButtons(
 			// building simple order (cart, no customer data, 0 shipping, no description)
 			this.newOrder(this.newCart([this.newItem(title, 1, value, category || 'PHYSICAL_GOODS')])),
 
@@ -492,13 +492,14 @@ NTPaypal.Shop.prototype.expressBuy = function(title, value, category, selector){
 
 
 /**
- * Show Paypal pay-now button for a given order
+ * Show Paypal pay-now buttons for a given order
  *
  * @param Order order Object of class Order containing all details to fullfill payment
  * @param string selector Selector to identify a container in the page to render the button into
+ * @param object application_context Object litteral with application context parameters
  * @return Promise Return a promise resolved when payment is approved, rejected when canceled
  */
-NTPaypal.Shop.prototype.paypalButton = function(order, selector)
+NTPaypal.Shop.prototype.paypalButtons = function(order, selector, application_context)
 {
 	try
 	{
@@ -513,7 +514,11 @@ NTPaypal.Shop.prototype.paypalButton = function(order, selector)
 		// creating request with relevant objects
 		var req = {};
 		req.purchase_units = [ order.toPurchaseUnit() ];
-
+		
+		
+		// if app_ctx defined
+		if ( application_context )
+			req.application_context = application_context;
 
 
 		// maybe the customer is not set (no default values in Paypal window)

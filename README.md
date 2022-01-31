@@ -16,11 +16,12 @@ If no cart handling is required, and customer data is not needed, the script is 
 
 ```
 var shop = new NTPaypal.Shop('EUR');
-shop.expressBuy('product title', 10.50, 'PHYSICAL_GOODS', '#selector_here')
+shop.expressButtons('product title', 10.50, 'PHYSICAL_GOODS', '#selector_here')
 ```
  
-The `expressBuy` method expects a title, an amount, a category ('PHYSICAL_GOODS', 'DIGITAL_GOODS', 'DONATION') and a selector to 
-draw the Paypal buttons into. Category parameters can be omitted (null) ; a Promise object is returned, and is resolved when the payment is done (otherwise, the promise is rejected).
+The `expressButtons` method expects a title, an amount, a category ('PHYSICAL_GOODS', 'DIGITAL_GOODS', 'DONATION') and a selector to 
+draw the Paypal buttons into. Category parameters can be omitted (null) ; a Promise object is returned, and is resolved when the payment is 
+done (otherwise, the promise is rejected).
 
 See below for an example about how to use Promises. 
  
@@ -88,11 +89,14 @@ Up to now, there's no Paypal button displayed yet. We can still update the shopp
 Then, to show the Paypal "buy now" buttons, we call the appropriate function from Shop object :
 
 ```
-shop.paypalButton(order, '#paypal_buttons_container');
+shop.paypalButtons(order, '#paypal_buttons_container');
 ```
 
 The second parameter is a selector to identify the DOM tag that will hold the paypal buttons (usually, a DIV tag) ; replace `#paypal_buttons_container` with any relevant selector.
 Upon completion of the method call, the Paypal buttons are rendered in the container, and the user can initiate the payment.
+
+There's also a third parameter, which makes it possible to pass the `application_context` parameter to the Paypal API. Mainly, this is used 
+to set it with `{ shipping_preference : 'NO_SHIPPING' }`, thus removing some customer address text fields not needed (only when clicking on 'Pay by card' black button).
 
 
 
@@ -103,7 +107,7 @@ The above Javascript line makes it possible for the client to do it's payment, h
 The paypalButton returns a Promise, that when resolved will pass data about the transaction :
 
 ```
-shop.paypalButton(order, '#paypal_buttons_container').then(
+shop.paypalButtons(order, '#paypal_buttons_container').then(
 	function(data){
 		alert('Transaction is OK, with ID ' + data.purchase_units[0].payments.captures[0].id);
 	}

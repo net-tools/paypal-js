@@ -71,13 +71,21 @@
 	{
 		return document.getElementById(id).value;
 	}
+		
+		
+		
+	function reset()
+	{
+		// reset paypal buttons
+		document.getElementById('paypalbtns').innerHTML = "";
+	}
 	
 		
 	
 	function go()
 	{
 		// reset buttons
-		document.getElementById('paypalbtns').innerHTML = "";
+		reset();
 		document.getElementById('log').value = '';
 		
 		
@@ -116,8 +124,10 @@
 		else
 			var p2 = null;
 		
+		
 		// create shopping cart
 		var cart = shop.newCart(p2?[p1,p2]:[p1]);
+		
 		
 		// create order with shipping cost 0€
 		var order = shop.newOrder(cart, {
@@ -126,8 +136,13 @@
 				description : 'Demo shopping cart content'
 			});
 		
+		
+		// define application
+		var app_ctx = document.getElementById('no_shipping').checked ? { shipping_preference : 'NO_SHIPPING' } : null;
+		
+		
 		// show paypal button
-		shop.paypalButton(order, '#paypalbtns').then(function(data)
+		shop.paypalButtons(order, '#paypalbtns', app_ctx).then(function(data)
 				{
 					var log = 'Paypal process OK\nThe transaction number is ' + data.purchase_units[0].payments.captures[0].id + '\n';
 					log += JSON.stringify(data, null, 3);
@@ -135,12 +150,13 @@
 			
 			
 					// reset paypal buttons
-					document.getElementById('paypalbtns').innerHTML = "";
+					reset();
 				}
 			)
 			.catch(function(data)
 				{
 					document.getElementById('log').value = 'ko\n' + JSON.stringify(data);
+					reset();
 				}
 			);
 	}
@@ -156,7 +172,7 @@
 		
 		// create shop and set currency code for all API calls
 		var shop = new NTPaypal.Shop('EUR');
-		shop.expressBuy('Express buy product 1', 10, null, '#paypalbtns').then(function(data)
+		shop.expressButtons('Express buy product 1', 10, null, '#paypalbtns').then(function(data)
 				{
 					var log = 'Paypal express buy process OK\nThe transaction number is ' + data.purchase_units[0].payments.captures[0].id + '\n';
 					log += JSON.stringify(data, null, 3);
@@ -164,12 +180,13 @@
 			
 			
 					// reset paypal buttons
-					document.getElementById('paypalbtns').innerHTML = "";
+					reset();
 				}
 			)
 			.catch(function(data)
 				{
 					document.getElementById('log').value = 'ko\n' + JSON.stringify(data);
+					reset();
 				}
 			);
 	}
@@ -221,6 +238,7 @@
 	</div>
 	
 	<div id="actions">
+		<label><input type="checkbox" value="1" id="no_shipping">No shipping</label>
 		<input type="button" value="Validate shopping cart" onclick="go();" id="btn_validate" disabled> 
 		<input type="button" value="Express buy 10€ (no cart)" onclick="express();" id="btn_express" disabled> (please set client-ID first above)
 	</div>
