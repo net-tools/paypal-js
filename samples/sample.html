@@ -79,7 +79,28 @@
 		// reset paypal buttons
 		document.getElementById('paypalbtns').innerHTML = "";
 	}
+		
+		
 	
+	function captureOk(data)
+	{
+		var log = 'Paypal express buy process OK\nThe transaction number is ' + data.purchase_units[0].payments.captures[0].id + '\n';
+		log += JSON.stringify(data, null, 3);
+		document.getElementById('log').value = log;
+
+
+		// reset paypal buttons
+		reset();
+	}
+		
+		
+	
+	function captureKo(data)
+	{
+		document.getElementById('log').value = 'ko\n' + JSON.stringify(data);
+		reset();
+	}
+
 		
 	
 	function go()
@@ -142,23 +163,9 @@
 		
 		
 		// show paypal button
-		shop.paypalButtons(order, '#paypalbtns', app_ctx).then(function(data)
-				{
-					var log = 'Paypal process OK\nThe transaction number is ' + data.purchase_units[0].payments.captures[0].id + '\n';
-					log += JSON.stringify(data, null, 3);
-					document.getElementById('log').value = log;
-			
-			
-					// reset paypal buttons
-					reset();
-				}
-			)
-			.catch(function(data)
-				{
-					document.getElementById('log').value = 'ko\n' + JSON.stringify(data);
-					reset();
-				}
-			);
+		shop.paypalButtons(order, '#paypalbtns', app_ctx)
+			.then(captureOk)
+			.catch(captureKo);
 	}
 		
 		
@@ -183,9 +190,13 @@
 				)
 				.withShipping(14)
 				.withDescription('Shopping cart built with fluent API')
+				.withCustom_id('Invoice nABC123')
 			.payButtonsInside('#paypalbtns')
 				.set('shipping_preference', 'NO_SHIPPING')
-			.execute();
+			.execute()
+		
+			.then(captureOk)
+			.catch(captureKo);		
 	}
 		
 		
@@ -199,23 +210,9 @@
 		
 		// create shop and set currency code for all API calls
 		var shop = new NTPaypal.Shop('EUR');
-		shop.expressButtons('Express buy product 1', 10, null, '#paypalbtns').then(function(data)
-				{
-					var log = 'Paypal express buy process OK\nThe transaction number is ' + data.purchase_units[0].payments.captures[0].id + '\n';
-					log += JSON.stringify(data, null, 3);
-					document.getElementById('log').value = log;
-			
-			
-					// reset paypal buttons
-					reset();
-				}
-			)
-			.catch(function(data)
-				{
-					document.getElementById('log').value = 'ko\n' + JSON.stringify(data);
-					reset();
-				}
-			);
+		shop.expressButtons('Express buy product 1', 10, null, '#paypalbtns')
+			.then(captureOk)
+			.catch(captureKo);
 	}
 		
 	</script>

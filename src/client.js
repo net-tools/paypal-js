@@ -431,7 +431,7 @@ NTPaypal.Cart.prototype.toPaypalItems = function()
  *
  * @param Cart Object of class Cart
  * @param string currency_code
- * @param object other Object litteral with non-mandatory parameters {Customer customer, float shipping, string description}
+ * @param object other Object litteral with non-mandatory parameters {Customer customer, float shipping, string description, string custom_id}
  */
 NTPaypal.Order = function(cart, currency_code, other){
 
@@ -458,6 +458,7 @@ NTPaypal.Order = function(cart, currency_code, other){
 	this.currency_code = currency_code;
 	this.shipping = other['shipping'] || 0;
 	this.description = other['description'] || '';
+	this.custom_id = other['custom_id'] || null;
 }
 
 
@@ -487,6 +488,7 @@ NTPaypal.Order.prototype.toPurchaseUnit = function()
 	var punit = {
 		items : content,
 		description : this.description,
+		custom_id : this.custom_id,
 		amount : {
 			currency_code : this.currency_code,
 			value : item_total + tax_total + this.shipping,
@@ -567,7 +569,7 @@ NTPaypal.Shop.prototype.newCustomer = function(firstname, other)
  * Create a new Order object
  *
  * @param Cart Object of class Cart
- * @param object other Object litteral with non-mandatory parameters {Customer customer, float shipping, string description}
+ * @param object other Object litteral with non-mandatory parameters {Customer customer, float shipping, string description, string custom_id}
  * @return Order
  */
 NTPaypal.Shop.prototype.newOrder = function(cart, other)
@@ -769,6 +771,7 @@ NTPaypal.Sale = function(shop){
 	this.customer = null;
 	this.shipping = 0;
 	this.description = '';	
+	this.custom_id = null;
 }
 
 
@@ -814,6 +817,20 @@ NTPaypal.Sale.prototype.withShipping = function (cost){
 NTPaypal.Sale.prototype.withDescription = function (description){
 
 	this.description = description;
+	return this;
+}
+
+
+
+/** 
+ * Provides a fluent method to set a custom_id value linked to the sale object
+ *
+ * @param string custom_id
+ * @return Sale Return this
+ */
+NTPaypal.Sale.prototype.withCustom_id = function (custom_id){
+
+	this.custom_id = custom_id;
 	return this;
 }
 
@@ -910,6 +927,8 @@ NTPaypal.Payment.prototype.execute = function() {
 		orderData.shipping = this.sale.shipping;
 	if ( this.sale.description )
 		orderData.description = this.sale.description;
+	if ( this.sale.custom_id )
+		orderData.custom_id = this.sale.custom_id;
 	
 	
 	// display paypal buttons

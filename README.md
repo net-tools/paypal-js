@@ -72,8 +72,8 @@ shop.sell(
 	)
 ```
 
-The `sell` method returns a Sale object providing several fluent methods (`to`, `withShipping`, `withDescription`) making it possible to
-chain calls to specify customer, shipping cost and description.
+The `sell` method returns a Sale object providing several fluent methods (`to`, `withShipping`, `withDescription`, `withCustom_id`) making it possible to
+chain calls to specify customer, shipping cost, description and client-side id.
 
 ```
 shop.sell(
@@ -90,6 +90,7 @@ shop.sell(
 			.living('123, fifth Avenue')
 			.in('75000', 'PARIS', 'FR')
 			.withEmail('john.doe@gmail.com')
+			.withCustom_id('Invoice nABC123')
 			.withPhone('0601020304', 'MOBILE')
 	)
 ```
