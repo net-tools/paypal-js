@@ -420,6 +420,18 @@ NTPaypal.Cart.prototype.toPaypalItems = function()
 
 
 
+/**
+ * Get Cart content as an array of CarItems objects
+ * 
+ * @return CartItem[]
+ */
+NTPaypal.Cart.prototype.getContent = function()
+{
+	return this.items;
+}
+
+
+
 
 // ----------------------------------------------------------------------
 
@@ -737,24 +749,34 @@ NTPaypal.Shop.prototype.customer = function()
 /**
  * Provides a method to start a fluent chain
  *
- * @param CartItem|array items Object of class CartItem or array of CartItem objects to begin the fluent chain with
+ * @param Cart|CartItem|array items Cart object OR Object of class CartItem OR array of CartItem objects to begin the fluent chain with
  * @return Sale Returns a fluent Sale object with appropriate methods to set customer details, shipping and description data
  */
 NTPaypal.Shop.prototype.sell = function(items)
 {
-	// if we have a single CartItem object, convert it to an array
+	// create Sale object and link it to this (Shop)
+	var sale = new NTPaypal.Sale(this);
+	
+	
+	// if we have a single Cart object, associate it with Sale object created
+	if ( (typeof(items) == 'object') && (items instanceof NTPaypal.Cart) )
+	{
+		sale.cart = items;
+		return sale;
+	}
+
+	
+	
+	// if we have a single CartItem object or an array, we have to create the Cart object	
 	if ( (typeof(items) == 'object') && (items instanceof NTPaypal.CartItem) )
 		items = [items];
 
 	// checking we have an array, otherwise, it's an error
 	if ( !((typeof(items) == 'object') && (items.constructor.name == 'Array')) )
 		throw new TypeError("'items' parameter of 'sell' method is not an array");
-	
-	
-	// create the fluent Sale object, linked to this shop, and store a newly created Cart object
-	var sale = new NTPaypal.Sale(this);
+		
+
 	sale.cart = this.newCart(items);
-	
 	return sale;
 }
 
