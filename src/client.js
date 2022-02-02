@@ -49,6 +49,36 @@ NTPaypal.CartItem = function(title, quantity, price, category, currency_code, ot
 
 
 /**
+ * Static method to create an instance from a litteral object (read from json data)
+ *
+ * @param object obj
+ */
+NTPaypal.CartItem.fromJson = function(obj)
+{
+	if ( typeof(obj) != 'object' )
+		throw new TypeError("'obj' parameter of 'fromJson' static method is not an object litteral");
+
+	
+	// create an empty object (can't call regular constructor, as we don't know it's values yet)
+	var o = Object.create(NTPaypal.CartItem.prototype);
+	
+	// takes proprerty values from litteral object
+	o.title = obj.title;
+	o.quantity = obj.quantity;
+	o.price = obj.price;
+	o.category = obj.category;
+	o.tax = obj.tax;
+	o.withDescription = obj.description;
+	o.sku = obj.sku;
+	o.currency_code = obj.currency_code;
+	
+	
+	return o;
+}
+
+
+
+/**
  * Convert a CartItem object to a Paypal item
  *
  * @return object
@@ -278,6 +308,31 @@ NTPaypal.Cart = function(items){
 	this.items = items || [];
 }
 
+
+
+/**
+ * Static method to create an instance from a litteral object (read from json data)
+ *
+ * @param string jsonString
+ * @throws SyntaxError Raised if json string is malformed
+ */
+NTPaypal.Cart.fromJson = function(jsonString)
+{
+	if ( typeof(jsonString) != 'string' )
+		throw new TypeError("'jsonString' parameter of 'fromJson' static method is not a string");
+	
+	
+	var obj = JSON.parse(jsonString);
+	
+	// create an empty object (can't call regular constructor, as we don't know it's values yet)
+	var o = Object.create(NTPaypal.Cart.prototype);
+	
+	// takes property values from litteral object
+	// currently, obj.items is an array of object litteral, not CartItem objects
+	o.items = obj.items.map(function(value){ return NTPaypal.CartItem.fromJson(value); });
+		
+	return o;
+}
 
 
 
@@ -974,5 +1029,231 @@ NTPaypal.Payment.prototype.execute = function() {
 }
 
 
+
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Base class defining methods for storing / restoring data from browser (cookies, sessionStorage, localStorage, etc.)
+ */
+NTPaypal.BrowserStorage = function()
+{	
+}
+
+
+
+/** 
+ * Abstract method for saving a value to storage
+ *
+ * @param string key
+ * @param string value
+ */
+NTPaypal.BrowserStorage.prototype.set = function(key, value){
+	throw new Error("'set' method not implemented in class '" + this.constructor.name + "'");
+}
+
+
+
+/** 
+ * Abstract method for getting a value from storage
+ *
+ * @param string key
+ * @return string
+ */
+NTPaypal.BrowserStorage.prototype.get = function(key){
+	throw new Error("'get' method not implemented in class '" + this.constructor.name + "'");
+}
+
+
+
+/** 
+ * Checking if a key exists in storage
+ *
+ * @param string key
+ * @return bool Returns true if key exists (with value other than null)
+ */
+NTPaypal.BrowserStorage.prototype.test = function(key){
+	return this.get(key) != null;
+}
+
+
+
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Class defining methods for storing / restoring data from browser localStorage
+ */
+NTPaypal.LocalStorage = function()
+{	
+    nettools.jscore.oop.parentConstructor(NTPaypal.LocalStorage, this);
+}
+nettools.jscore.oop.extend(NTPaypal.LocalStorage, NTPaypal.BrowserStorage);
+
+
+/** 
+ * Saving a value to storage
+ *
+ * @param string key
+ * @param string value
+ */
+NTPaypal.LocalStorage.prototype.set = function(key, value){
+	return window.localStorage.setItem(key, value);
+}
+
+
+
+/** 
+ * Getting a value from storage
+ *
+ * @param string key
+ * @return string
+ */
+NTPaypal.LocalStorage.prototype.get = function(key){
+	return window.localStorage.getItem(key);
+}
+
+
+
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Class defining methods for storing / restoring data from browser sessionStorage
+ */
+NTPaypal.SessionStorage = function()
+{	
+    nettools.jscore.oop.parentConstructor(NTPaypal.SessionStorage, this);
+}
+nettools.jscore.oop.extend(NTPaypal.SessionStorage, NTPaypal.BrowserStorage);
+
+
+
+/** 
+ * Saving a value to storage
+ *
+ * @param string key
+ * @param string value
+ */
+NTPaypal.SessionStorage.prototype.set = function(key, value){
+	return window.sessionStorage.setItem(key, value);
+}
+
+
+
+/** 
+ * Getting a value from storage
+ *
+ * @param string key
+ * @return string
+ */
+NTPaypal.SessionStorage.prototype.get = function(key){
+	return window.sessionStorage.getItem(key);
+}
+
+
+
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Class defining methods for storing / restoring data from browser cookies
+ */
+NTPaypal.CookiesStorage = function()
+{	
+    nettools.jscore.oop.parentConstructor(NTPaypal.CookiesStorage, this);
+}
+nettools.jscore.oop.extend(NTPaypal.CookiesStorage, NTPaypal.BrowserStorage);
+
+
+
+/** 
+ * Saving a value to storage
+ *
+ * @param string key
+ * @param string value
+ */
+NTPaypal.CookiesStorage.prototype.set = function(key, value){
+	return nettools.jscore.setCookie(key, value);
+}
+
+
+
+/** 
+ * Getting a value from storage
+ *
+ * @param string key
+ * @return string
+ */
+NTPaypal.CookiesStorage.prototype.get = function(key){
+	return nettools.jscore.getCookie(key);
+}
+
+
+
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Constructor for a class implementing a store/restore mechanism so that a shopping cart can be saved between page reloads, browsing, etc.
+ *
+ * @param Shop shop Reference to shop object
+ * @param BrowserStorage browserIntf Constructor for a BrowserStorage child class, implementing getter/setter to store and read values in browser session (cookies, localStorage, sessionStorage) ; d
+ */
+NTPaypal.Session = function(shop, browserIntf){
+
+	if ( !(shop instanceof NTPaypal.Shop) )
+		throw new TypeError("'shop' parameter of 'Session' is not an instance of 'Shop'");
+	
+	
+	// browserIntf is a class reference (such as NTPaypal.LocalStorage) ; creating an object of that class and check inheritance
+	this.storage = new browserIntf();	
+	if ( !(this.storage instanceof NTPaypal.BrowserStorage) )
+		throw new TypeError("'browserIntf' parameter of 'Session' object constructor is a constructor inheriting from 'BrowserStorage'")
+	
+	
+	this.shopname = 'paypalshop';
+	this.shop = shop;
+}
+
+
+
+/**
+ * Save current cart to storage
+ * 
+ * @param Cart cart
+ */
+NTPaypal.Session.prototype.save = function(cart)
+{
+	// checking parameter
+	if ( !(cart instanceof NTPaypal.Cart) )
+		throw new TypeError("'cat' parameter of 'save' method is not an instance of 'Cart'");
+	
+	this.storage.set(this.shopname + '.cart', JSON.stringify(cart));
+}
+
+
+
+/**
+ * Restore cart from storage
+ * 
+ * @return Cart
+ */
+NTPaypal.Session.prototype.restore = function()
+{
+	// restoring carte from storage
+	var json = this.storage.get(this.shopname + '.cart');
+	if ( !json )
+		return this.shop.newCart();
+	
+	
+	// if json data exists
+	return NTPaypal.Cart.fromJson(json);	
+}
 
 

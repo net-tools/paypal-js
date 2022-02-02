@@ -238,6 +238,33 @@ shop.paypalButtons(order, '#paypal_buttons_container').then(
 
 
 
+## Saving/restoring cart and cart items to browser storage
+
+Since the user may browse several pages to create his order, putting several products in the shopping cart, it's required to save the current cart content between 
+page loads, reloads etc.
+
+The NTPaypal client library provides 3 storage strategies : cookies (cart content lost when browser is closed), localStorage (cart content never lost), 
+sessionStorage (cart content lost when page, not browser is closed).
+
+To save the cart content to browser storage, a Session object must be created with appropriate parameters ; then the `save` method is called with a Cart object. 
+To restore data, `restore` method should be called.
+
+```
+
+// creating session, with a previously created Shop object
+// save/restore will be done through CookiesStorage interface (please note that you mustn't create a CookiesStorage object with new keyword, just pass the constructor reference)
+var s = new NTPaypal.Session(shop, NTPaypal.CookiesStorage);
+
+// saving a previously created Cart object
+s.save(cart);
+
+// ...... some time later
+var cart = s.restore();
+
+```
+
+
+
 
 
 

@@ -1,5 +1,6 @@
 <html>
 <head>
+	<script src="../../js-core/src/js-core.js.min"></script>
 	<script src="../src/client.js"></script>
 	
 	<style>
@@ -58,7 +59,14 @@
 		var PAYPAL_SCRIPT = 'https://www.paypal.com/sdk/js?currency=EUR&client-id=' + document.getElementById('paypal_client_id').value;
 		var script = document.createElement('script');
 		script.setAttribute('src', PAYPAL_SCRIPT);
-		script.onload = function(){ document.getElementById('btn_validate').disabled = document.getElementById('btn_express').disabled = document.getElementById('btn_fluent').disabled = false; }
+		script.onload = function(){ 
+			document.getElementById('btn_validate').disabled = 
+			document.getElementById('btn_express').disabled = 
+			document.getElementById('btn_fluent').disabled = 
+			document.getElementById('btn_save').disabled =
+			document.getElementById('btn_restore').disabled =
+			false;
+		}
 		document.head.appendChild(script);
 		
 		
@@ -103,7 +111,7 @@
 
 		
 	
-	function go()
+	function pay_cart()
 	{
 		// reset buttons
 		reset();
@@ -215,6 +223,55 @@
 			.catch(captureKo);
 	}
 		
+		
+		
+	function save()
+	{
+		// reset buttons
+		reset();
+		document.getElementById('log').value = '';
+		
+		
+		// create shop and set currency code for all API calls
+		var shop = new NTPaypal.Shop('EUR');
+		
+		// create the products
+		var p = shop.newItem(v('p1_title'), v('p1_quantity'), v('p1_price'), 'PHYSICAL_GOODS', {
+				sku			: v('p1_sku'), 
+				tax			: v('p1_tax'), 
+				description	: v('p1_descr')
+			});
+		
+		// create shopping cart
+		var cart = shop.newCart([p]);
+		
+		// create session
+		var session = new NTPaypal.Session(shop, NTPaypal.CookiesStorage);
+		session.save(cart);
+	}
+		
+		
+		
+	function restore()
+	{
+		// reset buttons
+		reset();
+		document.getElementById('log').value = '';
+		
+		
+		// create shop and set currency code for all API calls
+		var shop = new NTPaypal.Shop('EUR');
+		
+		// create session
+		var session = new NTPaypal.Session(shop, NTPaypal.CookiesStorage);
+		var cart = session.restore();
+		
+		document.getElementById('log').value = "Restoring cart from storage : " +
+			"\nCart instance of NTPaypal.Cart ? " + ((cart instanceof NTPaypal.Cart)?'yes':'no') +
+			"\nItem [0] instance of NTPaypal.CartItem ? " + ((cart.items[0] instanceof NTPaypal.CartItem)?'yes':'no') +
+			"\n\n" + JSON.stringify(cart);
+	}
+		
 	</script>
 	
 </head>
@@ -263,9 +320,12 @@
 	
 	<div id="actions">
 		<label><input type="checkbox" value="1" id="no_shipping">No shipping</label>
-		<input type="button" value="Validate shopping cart" onclick="go();" id="btn_validate" disabled> 
+		<input type="button" value="Validate shopping cart" onclick="pay_cart();" id="btn_validate" disabled> 
 		<input type="button" value="Express buy 10€ (no cart)" onclick="express();" id="btn_express" disabled> 
-		<input type="button" value="69€ cart with fluent API" onclick="fluent();" id="btn_fluent" disabled> (please set client-ID first above)
+		<input type="button" value="69€ cart with fluent API" onclick="fluent();" id="btn_fluent" disabled>
+		<br>
+		<input type="button" value="Save cart with product 1 details to Session" onclick="save();" id="btn_save" disabled>
+		<input type="button" value="Restore cart from Session" onclick="restore();" id="btn_restore" disabled> (please set client-ID first above)
 	</div>
 	
 	<div id="paypalbtns"></div>
