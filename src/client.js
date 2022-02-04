@@ -11,39 +11,35 @@ var NTPaypal = NTPaypal || {};
  * Constructor for a cart item
  *
  * @param string title Short description of product
- * @param int quantity Quantity purchased
  * @param float price Price for one product (excluding tax)
  * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
  * @param string currency_code Such as EUR, GBP, USD, etc.
  * @param object other Object litteral of non-mandatory parameters : {string sku, float tax, string description}
  */
-NTPaypal.CartItem = function(title, quantity, price, category, currency_code, other){
+NTPaypal.Product = function(title, price, category, currency_code, other){
 	
 	// normalize other parameter
 	other = other || {};
 	
 	this.title = title;
-	this.quantity = quantity;
 	this.price = price;
 	this.category = category;
-	this.tax = other['tax'] || 0;
-	this.description = other['description'] || '';
-	this.sku = other['sku'] || '';
+	this.tax = other.tax || 0;
+	this.description = other.description || '';
+	this.sku = other.sku || '';
 	this.currency_code = currency_code;
 	
 	
 	if ( !this.title )
-		throw new Error("'title' parameter of 'CartItem' constructor not set");
-	if ( !this.quantity )
-		throw new Error("'quantity' parameter of 'CartItem' constructor not set");
+		throw new Error("'title' parameter of 'Product' constructor not set");
 	if ( typeof price == 'undefined' )
-		throw new Error("'price' parameter of 'CartItem' constructor not set");
+		throw new Error("'price' parameter of 'Product' constructor not set");
 	if ( typeof category == 'undefined' )
-		throw new Error("'category' parameter of 'CartItem' constructor not set");
+		throw new Error("'category' parameter of 'Product' constructor not set");
 	if ( !this.currency_code )
-		throw new Error("'currency_code' parameter of 'CartItem' constructor not set");
+		throw new Error("'currency_code' parameter of 'Product' constructor not set");
 	if ( this.quantity <= 0 )
-		throw new Error("'quantity' parameter of 'CartItem' constructor is not in the allowed range");
+		throw new Error("'quantity' parameter of 'Product' constructor is not in the allowed range");
 }
 
 
@@ -53,18 +49,17 @@ NTPaypal.CartItem = function(title, quantity, price, category, currency_code, ot
  *
  * @param object obj
  */
-NTPaypal.CartItem.fromJson = function(obj)
+NTPaypal.Product.fromJson = function(obj)
 {
 	if ( typeof(obj) != 'object' )
 		throw new TypeError("'obj' parameter of 'fromJson' static method is not an object litteral");
 
 	
 	// create an empty object (can't call regular constructor, as we don't know it's values yet)
-	var o = Object.create(NTPaypal.CartItem.prototype);
+	var o = Object.create(NTPaypal.Product.prototype);
 	
 	// takes proprerty values from litteral object
 	o.title = obj.title;
-	o.quantity = obj.quantity;
 	o.price = obj.price;
 	o.category = obj.category;
 	o.tax = obj.tax;
@@ -79,17 +74,16 @@ NTPaypal.CartItem.fromJson = function(obj)
 
 
 /**
- * Convert a CartItem object to a Paypal item
+ * Convert a Product object to a Paypal item
  *
  * @return object
  */
-NTPaypal.CartItem.prototype.toPaypalItem = function()
+NTPaypal.Product.prototype.toPaypalItem = function()
 {
 	return {
 		name : this.title,
 		unit_amount : {currency_code: this.currency_code, value:this.price},
 		tax : {currency_code : this.currency_code, value:this.tax},
-		quantity : this.quantity,
 		description: this.description,
 		sku : this.sku,
 		category : this.category
@@ -102,9 +96,9 @@ NTPaypal.CartItem.prototype.toPaypalItem = function()
  * Fluent method to set non-mandatory parameter tax
  *
  * @param float tax
- * @return CartItem
+ * @return Product
  */
-NTPaypal.CartItem.prototype.setTax = function(tax)
+NTPaypal.Product.prototype.setTax = function(tax)
 {
 	this.tax = tax;
 	return this;
@@ -116,9 +110,9 @@ NTPaypal.CartItem.prototype.setTax = function(tax)
  * Fluent method to set non-mandatory parameter sku
  *
  * @param string sku
- * @return CartItem
+ * @return Product
  */
-NTPaypal.CartItem.prototype.setSku = function(sku)
+NTPaypal.Product.prototype.setSku = function(sku)
 {
 	this.sku = sku;
 	return this;
@@ -130,12 +124,87 @@ NTPaypal.CartItem.prototype.setSku = function(sku)
  * Fluent method to set non-mandatory parameter description
  *
  * @param string description
- * @return CartItem
+ * @return Product
  */
-NTPaypal.CartItem.prototype.withDescription = function(description)
+NTPaypal.Product.prototype.withDescription = function(description)
 {
 	this.description = description;
 	return this;
+}
+
+
+
+/**
+ * Fluent method to set quantity, although returning a ProductQuantity, thus preventing further chaining on Product methods
+ *
+ * @param int n
+ * @return ProductQuantity
+ */
+NTPaypal.Product.prototype.setQuantity = function(n)
+{
+	return new NTPaypal.ProductQuantity(this, n);
+}
+
+
+
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Constructor for a product associated to a quantity (to be used in stock or cart management)
+ *
+ * @param Product product object
+ * @param int quantity
+ */
+NTPaypal.ProductQuantity = function(product, quantity)
+{
+	if ( !(product instanceof NTPaypal.Product) )
+		throw new TypeError("'item' parameter of 'ProductQuantity' constructor is not a Product instance");
+
+	
+	this.product = product;
+	this.quantity = quantity || 0;
+}
+
+
+
+/**
+ * Static method to create a ProductQuantity object from an object litteral (json)
+ *
+ * @param object obj
+ * @return ProductQuantity
+ */
+NTPaypal.ProductQuantity.fromJson = function(obj)
+{
+	if ( typeof(obj) != 'object' )
+		throw new TypeError("'obj' parameter of 'fromJson' static method is not an object litteral");
+
+	if ( !obj.product || !obj.product.sku )
+		throw new Error("'sku' property for product '" + obj.product.title + "' is mandatory when creating ProductQuantity object");
+
+	
+	// create an empty object (can't call regular constructor, as we don't know it's values yet)
+	var o = Object.create(NTPaypal.ProductQuantity.prototype);
+	o.product = NTPaypal.Product.fromJson(obj.product);
+	o.quantity = obj.quantity;
+	
+	return o;
+}
+
+
+
+/**
+ * Convert product quantity object to Paypal object litteral
+ *
+ * @return object
+ */
+NTPaypal.ProductQuantity.prototype.toPaypalItem = function()
+{
+	var ret = this.product.toPaypalItem();
+	ret.quantity = this.quantity;
+	
+	return ret;
 }
 
 
@@ -160,25 +229,25 @@ NTPaypal.Customer = function(firstname, other)
 	
 	if ( !firstname )
 		throw new Error("'firstname' parameter of 'Customer' constructor not set");
-	if ( (other['phone'] && !other['phone_type']) || (!other['phone'] && other['phone_type']) )
+	if ( (other.phone && !other.phone_type) || (!other.phone && other.phone_type) )
 		throw new Error("'other.phone' and 'other.phone_type' parameters of 'Customer' constructor not set");
-	if ( other['city'] || other['zipcode'] || other['countrycode'] )
+	if ( other.city || other.zipcode || other.countrycode )
 	{
-		if ( !other['city'] || !other['zipcode'] || !other['countrycode'] )
+		if ( !other.city || !other.zipcode || !other.countrycode )
 			throw new Error("'other.city', 'other.zipcode' and 'other.countrycode' parameters of 'Customer' constructor not set");
 	}
 	
 	
 	this.firstname = firstname;
-	this.surname = other['surname'] || '';
-	this.address1 = other['address1'] || '';
-	this.address2 = other['address2'] || '';
-	this.zipcode = other['zipcode'] || '';
-	this.city = other['city'] || '';
-	this.countrycode = other['countrycode'] || '';
-	this.email = other['email'] || '';
-	this.phone = other['phone'] || '';
-	this.phone_type = other['phone_type'] || '';
+	this.surname = other.surname || '';
+	this.address1 = other.address1 || '';
+	this.address2 = other.address2 || '';
+	this.zipcode = other.zipcode || '';
+	this.city = other.city || '';
+	this.countrycode = other.countrycode || '';
+	this.email = other.email || '';
+	this.phone = other.phone || '';
+	this.phone_type = other.phone_type || '';
 }
 
 
@@ -295,16 +364,19 @@ NTPaypal.Customer.prototype.withEmail = function(email){
 /**
  * Constructor of a shopping cart 
  *
- * @param null|CartItem[] items Array of CartItem objects ; content of shopping cart can be set later with add method instead of this items paremeters
+ * @param null|ProductQuantity[] items Array of ProductQuantity objects ; content of shopping cart can be set later with add method instead of this items paremeters
  */
 NTPaypal.Cart = function(items){
 	
 	if ( (typeof(items) == 'object') && (items.constructor.name != 'Array') )
 		throw new TypeError("'items' parameter of 'Cart' constructor is not an array");
 	
-	/**
-	 * @property CartItem[] Array of cart items
-	 */
+
+	// checking array content
+	if ( items.length && !(items[0] instanceof NTPaypal.ProductQuantity) )
+		throw new TypeError("'items' parameter of 'Cart' constructor is not an array of ProductQuantity objects");
+	
+	
 	this.items = items || [];
 }
 
@@ -328,8 +400,8 @@ NTPaypal.Cart.fromJson = function(jsonString)
 	var o = Object.create(NTPaypal.Cart.prototype);
 	
 	// takes property values from litteral object
-	// currently, obj.items is an array of object litteral, not CartItem objects
-	o.items = obj.items.map(function(value){ return NTPaypal.CartItem.fromJson(value); });
+	// currently, obj.items is an array of object litteral, not ProductQuantity objects
+	o.items = obj.items.map(function(value){ return NTPaypal.ProductQuantity.fromJson(value); });
 		
 	return o;
 }
@@ -358,25 +430,34 @@ NTPaypal.Cart.prototype.count = function(){
 
 
 /**
- * Add an item to the cart
+ * Add an item (Product object) to the cart, with a given quantity
  *
- * If the product is already in the cart, its quantity is incremented
+ * If the product is already in the cart, its quantity is incremented by n
  *
- * @param CartItem item Instance of CartItem class to describe product added to the cart
+ * @param Product item Product object to add to the cart
+ * @param int n Number of items to add (default 1)
  */
-NTPaypal.Cart.prototype.add = function(item){
+NTPaypal.Cart.prototype.add = function(item, n){
 	
 	// checking parameters
-	if ( !(item instanceof NTPaypal.CartItem) )
-		throw new TypeError("'item' parameter of 'Cart.add' method is not an instance of 'CartItem'");
+	if ( !(item instanceof NTPaypal.Product) )
+		throw new TypeError("'item' parameter of 'Cart.add' method is not an instance of 'Product'");
 	
 	
-	// look for item with same id in the cart ; if found, increment quantity or item in cart (ignoring 'item' parameter)
-	var item_in_cart = this.search(item.id);
-	if ( item_in_cart )
-		item_in_cart.quantity++;	
-	else
-		this.items.push(item);
+	var n = n || 1;
+	
+	
+	try
+	{
+		// look for item with same id in the cart ; if found, increment quantity of item in cart
+		var prod_quantity = this.get(item.sku);
+		prod_quantity.quantity = prod_quantity.quantity + n;
+	}
+	catch ( err )
+	{
+		// item not found, adding it to the cart
+		this.items.push(new NTPaypal.ProductQuantity(item, n));
+	}
 }
 
 
@@ -384,14 +465,14 @@ NTPaypal.Cart.prototype.add = function(item){
 /**
  * Removes an item from the cart (no matter what is its quantity value)
  *
- * @param string id
+ * @param string sku
  */
-NTPaypal.Cart.prototype.remove = function(id){
+NTPaypal.Cart.prototype.remove = function(sku){
 	
-	// look for item with same id in the cart ; if found, increment quantity or item in cart (ignoring 'item' parameter)
+	// look for item with same sku in the cart ; if found, removing all quantities
 	var il = this.items.length;
 	for ( var i = 0 ; i < il ; i++ )
-		if ( this.items[i].id == id )
+		if ( this.items[i].product.sku == sku )
 		{
 			this.items.splice(i, 1);
 			return;
@@ -403,55 +484,50 @@ NTPaypal.Cart.prototype.remove = function(id){
 /**
  * Set a quantity for a product already added to the cart
  *
- * @param string id
+ * @param string sku
  * @param int quantity
  */
-NTPaypal.Cart.prototype.setQuantity = function(id, quantity){
+NTPaypal.Cart.prototype.setQuantity = function(sku, quantity){
 	
 	// look for item
-	var item = this.search(id);
-	
-	if ( !item )
-		throw new Error("Item with id='" + id + "' not found in cart");
-	
-	item.quantity = quantity;
+	this.get(sku).quantity = quantity;
 }
 
 
 
 /**
- * Look for a product ID that may have already been added to the cart
+ * Look for a product SKU that may have already been added to the cart
  *
- * @param string id
- * @return false|CartItem
+ * @param string sku
+ * @return false|ProductQuantity
  */
-NTPaypal.Cart.prototype.search = function(id){
+NTPaypal.Cart.prototype.get = function(sku){
 		
 	var il = this.items.length;
 	for ( var i = 0 ; i < il ; i++ )
-		if ( this.items[i].id == id )
+		if ( this.items[i].product.sku == sku )
 			return this.items[i];
 	
-	// if we arrive here, no product with matching id found
-	return false;
+	// if we arrive here, no product with matching sku found
+	throw new Error("Item with sku='" + sku + "' not found in cart");
 }
 
 
 
 /**
- * Check if a product ID has already been added to the cart
+ * Check if a product SKU has already been added to the cart
  *
- * @param string id
+ * @param string sku
  * @return bool
  */
-NTPaypal.Cart.prototype.contains = function(id){
+NTPaypal.Cart.prototype.contains = function(sku){
 		
 	var il = this.items.length;
 	for ( var i = 0 ; i < il ; i++ )
-		if ( this.items[i].id == id )
+		if ( this.items[i].product.sku == sku )
 			return true;
 	
-	// if we arrive here, no product with matching id found
+	// if we arrive here, no product with matching sku found
 	return false;
 }
 
@@ -476,9 +552,9 @@ NTPaypal.Cart.prototype.toPaypalItems = function()
 
 
 /**
- * Get Cart content as an array of CarItems objects
+ * Get Cart content as an array of ProductQuantity objects
  * 
- * @return CartItem[]
+ * @return ProductQuantity[]
  */
 NTPaypal.Cart.prototype.getContent = function()
 {
@@ -510,22 +586,22 @@ NTPaypal.Order = function(cart, currency_code, other){
 	if ( !(cart instanceof NTPaypal.Cart) )
 		throw new TypeError("'cart' parameter of 'Order' constructor is not an instance of 'Cart'");
 	
-	if ( (typeof(other['customer'])=='object') && !(other['customer'] instanceof NTPaypal.Customer) )
+	if ( (typeof(other.customer)=='object') && !(other.customer instanceof NTPaypal.Customer) )
 		throw new TypeError("'other.customer' parameter of 'Order' constructor is not an instance of 'Customer'");
 	
-	if ( other['customer'] && !(typeof(other['customer'])=='object') )
+	if ( other.customer && !(typeof(other.customer)=='object') )
 		throw new TypeError("'other.customer' parameter of 'Order' constructor is not an instance of 'Customer'");
 
 	if ( !currency_code )
 		throw new Error("'currency_code' parameter of 'Order' constructor not set");
 	
 	
-	this.customer = other['customer'] || null;
+	this.customer = other.customer || null;
 	this.cart = cart;	
 	this.currency_code = currency_code;
-	this.shipping = other['shipping'] || 0;
-	this.description = other['description'] || '';
-	this.custom_id = other['custom_id'] || null;
+	this.shipping = other.shipping || 0;
+	this.description = other.description || '';
+	this.custom_id = other.custom_id || null;
 }
 
 
@@ -603,18 +679,31 @@ NTPaypal.Shop = function(currency_code)
 
 
 /**
- * Create a cart item
+ * Create a product
  *
  * @param string title Short description of product
- * @param int quantity Quantity purchased
  * @param float price Price for one product (excluding tax)
  * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
  * @param object other Object litteral of non-mandatory parameters : {string sku, float tax, string description}
- * @return CartItem
+ * @return Product
  */
-NTPaypal.Shop.prototype.newItem = function(title, quantity, price, category, other)
+NTPaypal.Shop.prototype.newProduct = function(title, price, category, other)
 {
-	return new NTPaypal.CartItem(title, quantity, price, category, this.currency_code, other);
+	return new NTPaypal.Product(title, price, category, this.currency_code, other);
+}
+
+
+
+/**
+ * Create a product quantity objet
+ *
+ * @param Product product
+ * @param int quantity
+ * @return ProductQuantity
+ */
+NTPaypal.Shop.prototype.newProductQuantity = function(product, quantity)
+{
+	return new NTPaypal.ProductQuantity(product, quantity);
 }
 
 
@@ -662,7 +751,7 @@ NTPaypal.Shop.prototype.newCart = function(items){
 
 
 
-/**
+/** TODO
  * Quickly create required objects and show Paypal "buy now" buttons (with some values being forced to default values : tax = 0, description = '')
  *
  * @param string title Short description of item purchased
@@ -675,7 +764,7 @@ NTPaypal.Shop.prototype.expressButtons = function(title, value, category, select
 	// calling paypalButton method
 	return this.paypalButtons(
 			// building simple order (cart, no customer data, 0 shipping, no description)
-			this.newOrder(this.newCart([this.newItem(title, 1, value, category || 'PHYSICAL_GOODS')])),
+			this.newOrder(this.newCart([this.newProductQuantity(this.newProduct(title, value, category || 'PHYSICAL_GOODS'), 1)])),
 
 			// DOM selector
 			selector
@@ -770,20 +859,32 @@ NTPaypal.Shop.prototype.paypalButtons = function(order, selector, application_co
 
 
 
-
 /**
- * Create a CartItem object through a fluent method
+ * Create a Product object through a fluent method
  *
- * Same parameters as NTPaypal.Shop.newItem method
+ * Same parameters as NTPaypal.Shop.newProduct method
  *
  * @param string title Short description of product
- * @param int quantity Quantity purchased
  * @param float price Price for one product (excluding tax)
  * @param string category Category of goods (DIGITAL_GOODS, PHYSICAL_GOODS, DONATION)
  * @param object other Object litteral of non-mandatory parameters : {string sku, float tax, string description}
- * @return CartItem
+ * @return Product
  */
-NTPaypal.Shop.prototype.product = NTPaypal.Shop.prototype.newItem;
+NTPaypal.Shop.prototype.product = NTPaypal.Shop.prototype.newProduct;
+
+
+
+/**
+ * Create a ProductQuantity object through a fluent method
+ *
+ * @param int quantity
+ * @param Product product
+ * @return ProductQuantity
+ */
+NTPaypal.Shop.prototype.quantityOf = function(quantity, product)
+{
+	return this.newProductQuantity(product, quantity);
+}
 
 
 
@@ -804,7 +905,7 @@ NTPaypal.Shop.prototype.customer = function()
 /**
  * Provides a method to start a fluent chain
  *
- * @param Cart|CartItem|array items Cart object OR Object of class CartItem OR array of CartItem objects to begin the fluent chain with
+ * @param Cart|Product|ProductQuantity|ProductQuantity[] items Cart object OR Object of class Product (assuming quantity = 1) OR ProductQuantity object OR array of ProductQuantity objects to begin the fluent chain with
  * @return Sale Returns a fluent Sale object with appropriate methods to set customer details, shipping and description data
  */
 NTPaypal.Shop.prototype.sell = function(items)
@@ -822,13 +923,23 @@ NTPaypal.Shop.prototype.sell = function(items)
 
 	
 	
-	// if we have a single CartItem object or an array, we have to create the Cart object	
-	if ( (typeof(items) == 'object') && (items instanceof NTPaypal.CartItem) )
+	// if we have a single Product object, create ProductQuantity object, with quantity set to 1
+	if ( (typeof(items) == 'object') && (items instanceof NTPaypal.Product) )
+		items = [this.newProductQuantity(items, 1)];
+
+	
+	// if we have a single ProductQuantity object, create an array
+	if ( (typeof(items) == 'object') && (items instanceof NTPaypal.ProductQuantity) )
 		items = [items];
+
 
 	// checking we have an array, otherwise, it's an error
 	if ( !((typeof(items) == 'object') && (items.constructor.name == 'Array')) )
 		throw new TypeError("'items' parameter of 'sell' method is not an array");
+		
+	// checking we have an array, otherwise, it's an error
+	if ( items.length && !(items[0] instanceof NTPaypal.ProductQuantity) )
+		throw new TypeError("'items' parameter of 'sell' method is not an array of ProductQuantity objects");
 		
 
 	sale.cart = this.newCart(items);
@@ -1026,234 +1137,6 @@ NTPaypal.Payment.prototype.execute = function() {
 			// application_context
 			this.application_context		
 		);
-}
-
-
-
-// ----------------------------------------------------------------------
-
-
-
-/**
- * Base class defining methods for storing / restoring data from browser (cookies, sessionStorage, localStorage, etc.)
- */
-NTPaypal.BrowserStorage = function()
-{	
-}
-
-
-
-/** 
- * Abstract method for saving a value to storage
- *
- * @param string key
- * @param string value
- */
-NTPaypal.BrowserStorage.prototype.set = function(key, value){
-	throw new Error("'set' method not implemented in class '" + this.constructor.name + "'");
-}
-
-
-
-/** 
- * Abstract method for getting a value from storage
- *
- * @param string key
- * @return string
- */
-NTPaypal.BrowserStorage.prototype.get = function(key){
-	throw new Error("'get' method not implemented in class '" + this.constructor.name + "'");
-}
-
-
-
-/** 
- * Checking if a key exists in storage
- *
- * @param string key
- * @return bool Returns true if key exists (with value other than null)
- */
-NTPaypal.BrowserStorage.prototype.test = function(key){
-	return this.get(key) != null;
-}
-
-
-
-// ----------------------------------------------------------------------
-
-
-
-/**
- * Class defining methods for storing / restoring data from browser localStorage
- */
-NTPaypal.LocalStorage = function()
-{	
-    nettools.jscore.oop.parentConstructor(NTPaypal.LocalStorage, this);
-}
-nettools.jscore.oop.extend(NTPaypal.LocalStorage, NTPaypal.BrowserStorage);
-
-
-/** 
- * Saving a value to storage
- *
- * @param string key
- * @param string value
- */
-NTPaypal.LocalStorage.prototype.set = function(key, value){
-	return window.localStorage.setItem(key, value);
-}
-
-
-
-/** 
- * Getting a value from storage
- *
- * @param string key
- * @return string
- */
-NTPaypal.LocalStorage.prototype.get = function(key){
-	return window.localStorage.getItem(key);
-}
-
-
-
-// ----------------------------------------------------------------------
-
-
-
-/**
- * Class defining methods for storing / restoring data from browser sessionStorage
- */
-NTPaypal.SessionStorage = function()
-{	
-    nettools.jscore.oop.parentConstructor(NTPaypal.SessionStorage, this);
-}
-nettools.jscore.oop.extend(NTPaypal.SessionStorage, NTPaypal.BrowserStorage);
-
-
-
-/** 
- * Saving a value to storage
- *
- * @param string key
- * @param string value
- */
-NTPaypal.SessionStorage.prototype.set = function(key, value){
-	return window.sessionStorage.setItem(key, value);
-}
-
-
-
-/** 
- * Getting a value from storage
- *
- * @param string key
- * @return string
- */
-NTPaypal.SessionStorage.prototype.get = function(key){
-	return window.sessionStorage.getItem(key);
-}
-
-
-
-// ----------------------------------------------------------------------
-
-
-
-/**
- * Class defining methods for storing / restoring data from browser cookies
- */
-NTPaypal.CookiesStorage = function()
-{	
-    nettools.jscore.oop.parentConstructor(NTPaypal.CookiesStorage, this);
-}
-nettools.jscore.oop.extend(NTPaypal.CookiesStorage, NTPaypal.BrowserStorage);
-
-
-
-/** 
- * Saving a value to storage
- *
- * @param string key
- * @param string value
- */
-NTPaypal.CookiesStorage.prototype.set = function(key, value){
-	return nettools.jscore.setCookie(key, value);
-}
-
-
-
-/** 
- * Getting a value from storage
- *
- * @param string key
- * @return string
- */
-NTPaypal.CookiesStorage.prototype.get = function(key){
-	return nettools.jscore.getCookie(key);
-}
-
-
-
-// ----------------------------------------------------------------------
-
-
-
-/**
- * Constructor for a class implementing a store/restore mechanism so that a shopping cart can be saved between page reloads, browsing, etc.
- *
- * @param Shop shop Reference to shop object
- * @param BrowserStorage browserIntf Constructor for a BrowserStorage child class, implementing getter/setter to store and read values in browser session (cookies, localStorage, sessionStorage) ; d
- */
-NTPaypal.Session = function(shop, browserIntf){
-
-	if ( !(shop instanceof NTPaypal.Shop) )
-		throw new TypeError("'shop' parameter of 'Session' is not an instance of 'Shop'");
-	
-	
-	// browserIntf is a class reference (such as NTPaypal.LocalStorage) ; creating an object of that class and check inheritance
-	this.storage = new browserIntf();	
-	if ( !(this.storage instanceof NTPaypal.BrowserStorage) )
-		throw new TypeError("'browserIntf' parameter of 'Session' object constructor is a constructor inheriting from 'BrowserStorage'")
-	
-	
-	this.shopname = 'paypalshop';
-	this.shop = shop;
-}
-
-
-
-/**
- * Save current cart to storage
- * 
- * @param Cart cart
- */
-NTPaypal.Session.prototype.save = function(cart)
-{
-	// checking parameter
-	if ( !(cart instanceof NTPaypal.Cart) )
-		throw new TypeError("'cat' parameter of 'save' method is not an instance of 'Cart'");
-	
-	this.storage.set(this.shopname + '.cart', JSON.stringify(cart));
-}
-
-
-
-/**
- * Restore cart from storage
- * 
- * @return Cart
- */
-NTPaypal.Session.prototype.restore = function()
-{
-	// restoring carte from storage
-	var json = this.storage.get(this.shopname + '.cart');
-	if ( !json )
-		return this.shop.newCart();
-	
-	
-	// if json data exists
-	return NTPaypal.Cart.fromJson(json);	
 }
 
 

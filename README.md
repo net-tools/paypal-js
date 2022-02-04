@@ -251,9 +251,9 @@ To restore data, `restore` method should be called.
 
 ```
 
-// creating session, with a previously created Shop object
+// creating session
 // save/restore will be done through CookiesStorage interface (please note that you mustn't create a CookiesStorage object with new keyword, just pass the constructor reference)
-var s = new NTPaypal.Session(shop, NTPaypal.CookiesStorage);
+var s = new NTPaypal.Session(NTPaypal.CookiesStorage);
 
 // saving a previously created Cart object
 s.save(cart);
