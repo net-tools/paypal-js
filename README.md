@@ -54,21 +54,36 @@ First, we create a Shop object with desired currency ; the Shop object which ser
 var shop = new NTPaypal.Shop('EUR');
 ```
 
-Then, we begin with fluent API, starting with `sell` method. It accepts a CartItem object (or array of objects) to represent the items purchased.
-The CartItem may be created in a programmatic way or rather with the fluent API provided with `Shop.product` method (having title, quantity, cost and category parameters)
+Then, we begin with fluent API, starting with `sell` method. It accepts a Product object to represent a single item purchased. If
+purchasing different products, with maybe some quantities for each one, the `sell` method can accept an array of ProductQuantity objects (associating Product and quantity).
+The Product object may be created in a programmatic way or rather with the fluent API provided with `Shop.product` method (having title, cost and category parameters)
 
 ```
-shop.sell(shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS'))
+shop.sell(shop.product('Product Label', 3.45, 'PHYSICAL_GOODS'))
 ```
 
-Then, we use CartItem fluent methods if needed :
+Then, we use Product fluent methods if needed :
  
 ```
 shop.sell(
-		shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS')
+		shop.product('Product Label', 3.45, 'PHYSICAL_GOODS')
 				.setTax(12)
 				.withDescription('Fantastic product here')
 				.setSku('EANXXXXXXX')
+	)
+```
+
+To set an amount of units for a product, we use the fluent method `setQuantity` on the Product object returned by `Shop.product`. However, it's important to note that
+`setQuantity` does not return the Product object, but a new object of class ProductQuantity, thus preventing further chaining. In other words, 
+`setTax`, `withDescription` and `setSku` must be called before :
+
+```
+shop.sell(
+		shop.product('Product Label', 3.45, 'PHYSICAL_GOODS')
+				.setTax(12)
+				.withDescription('Fantastic product here')
+				.setSku('EANXXXXXXX')
+				.setQuantity(3)
 	)
 ```
 
@@ -77,20 +92,20 @@ chain calls to specify customer, shipping cost, description and client-side id.
 
 ```
 shop.sell(
-		shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS')
+		shop.product('Product Label', 3.45, 'PHYSICAL_GOODS')
 				.setTax(12)
 				.withDescription('Fantastic product here')
 				.setSku('EANXXXXXXX')
 	)	
 	.withShipping(32)
 	.withDescription('Order received, thanks')
+	.withCustom_id('Invoice nABC123')
 	.to(
 		shop.customer()
 			.named('John', 'Doe'),
 			.living('123, fifth Avenue')
 			.in('75000', 'PARIS', 'FR')
 			.withEmail('john.doe@gmail.com')
-			.withCustom_id('Invoice nABC123')
 			.withPhone('0601020304', 'MOBILE')
 	)
 ```
@@ -101,7 +116,7 @@ call its `execute` method to display buttons.
 
 ```
 shop.sell(
-		shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS')
+		shop.product('Product Label', 3.45, 'PHYSICAL_GOODS')
 				.setTax(12)
 				.withDescription('Fantastic product here')
 				.setSku('EANXXXXXXX')
@@ -124,7 +139,7 @@ If some Paypal application context parameters are required, they can be set than
 
 ```
 shop.sell(
-		shop.product('Product Label', 10, 3.45, 'PHYSICAL_GOODS')
+		shop.product('Product Label', 3.45, 'PHYSICAL_GOODS')
 				.setTax(12)
 				.withDescription('Fantastic product here')
 				.setSku('EANXXXXXXX')
@@ -171,7 +186,7 @@ First, we create a Shop object with desired currency ; the Shop object which ser
 var shop = new NTPaypal.Shop('EUR');
 ```
 
-Then we create the Customer and CartItem objects. Please not that mandatory values are passed as regular parameters to constructors, whereas 
+Then we create the Customer and Product objects. Please not that mandatory values are passed as regular parameters to constructors, whereas 
 not required ones are passed through an `other` object litteral parameter.
 
 ```					
@@ -187,17 +202,17 @@ var cust = shop.newCustomer('John', {
 	phone_type : 'MOBILE'
 });
 
-var p1 = shop.newItem('Product 1', 1, 12.50, 'PHYSICAL_GOODS', {
+var p1 = shop.newProduct('Product 1', 12.50, 'PHYSICAL_GOODS', {
 		sku : 'EAN123456',
  		tax : 1.12, 
 		description : 'Great product 1 here'
 	});
 ```
 
-We create a shopping cart filled with the items (here, only one)
+We create a shopping cart filled with the items (here, a product with an amount of 5 units) and proper quantities.
 
 ```
-var cart = shop.newCart([p1]);
+var cart = shop.newCart([shop.newProductQuantity(p1, 5)]);
 ```
 
 Finally, we create the order binding all thoses objects together 
@@ -206,7 +221,7 @@ Finally, we create the order binding all thoses objects together
 var order = shop.newOrder(cart, cust);
 ```
 
-Up to now, there's no Paypal button displayed yet. We can still update the shopping cart, with relevant Cart objects methods (`add`, `remove`, `setQuantity`, `search`, `contains`, `count`, `empty`).
+Up to now, there's no Paypal button displayed yet. We can still update the shopping cart, with relevant Cart objects methods (`add`, `remove`, `setQuantity`, `contains`, `count`, `empty`).
 
 Then, to show the Paypal "buy now" buttons, we call the appropriate function from Shop object :
 
@@ -264,6 +279,94 @@ var cart = s.restore();
 ```
 
 
+
+## Managing store (stock) and cart
+
+### Creating store
+
+For a simple payment flow, creating a cart from scratch (like the example above) is enough.
+However, when creating an online shop, it's mandatory to deal with product stock ; it prevents user from putting in the shopping cart more units of a product than those
+available in the store.
+
+Creating a Store object, with products and their quantities, is much like creating a Cart :
+
+```
+// creating 2 products with respectively 20 and 10 units
+var p1 = new NTPaypal.ProductQuantity(new NTPaypal.Product('store_product_1', 11.11, 'PHYSICAL_GOODS', 'EUR', { sku : 'prd_1' }), 20);
+var p2 = new NTPaypal.ProductQuantity(new NTPaypal.Product('store_product_2', 22.22, 'PHYSICAL_GOODS', 'EUR', { sku : 'prd_2' }), 10);
+		
+var store = new NTPaypal.Store([p1, p2]);
+```
+
+Since the quantities of each products may come from server-side database, creating the javascript Store object may be done with Json data :
+
+```
+var store = NTPaypal.Store.fromJson('{
+   "inventory": {
+      "items": [
+         {
+            "product": {
+               "title": "store_product_1",
+               "price": 11.11,
+               "category": "PHYSICAL_GOODS",
+               "tax": 0,
+               "withDescription": "",
+               "sku": "prd_1",
+               "currency_code": "EUR"
+            },
+            "quantity": 20
+         },
+         {
+            "product": {
+               "title": "store_product_2",
+               "price": 22.22,
+               "category": "PHYSICAL_GOODS",
+               "tax": 0,
+               "withDescription": "",
+               "sku": "prd_2",
+               "currency_code": "EUR"
+            },
+            "quantity": 10
+         }
+      ]
+   }
+}');
+```
+
+
+### Adding items to cart
+
+To move items from a Store object to a previously created Cart object :
+
+```
+store.addToCart('prd_1', cart);
+```
+
+If the product with given SKU doesn't exist, an Error exception is thrown.
+If there's no more unit available in store, we can't move one to cart, the method `addToCart` return false.
+
+
+
+### Moving back items from cart to store
+
+To remove all units of a product in the cart and put them back to store :
+
+```
+store.removeFromCart('prd_1', cart);
+```
+
+
+### Dealing with quantities in cart
+
+To update quantities of a product in the cart, there are 2 methods : one to set the amount, the other to add / remove units from current quantity in cart.
+
+```
+// set the amount to 5
+store.setCartQuantity('prd_1', 5, cart);
+
+// set the amount to the current amount in the cart minus 1
+store.updateCartQuantity('prd_2', -1, cart);
+```
 
 
 

@@ -2,6 +2,7 @@
 <head>
 	<script src="../../js-core/src/js-core.js.min"></script>
 	<script src="../src/client.js"></script>
+	<script src="../src/store.js"></script>
 	
 	<style>
 		body{
@@ -27,13 +28,23 @@
 			padding:0.5em;
 		}
 		
+		div#actions p{		
+			background-color: whitesmoke;
+			padding:0.5em;
+			margin:0;
+		}
+		
+		div#actions p:nth-child(2n+1){		
+			background-color: gainsboro;
+		}
+		
 		textarea {
 			margin-top:2em;
 			height:30em;
 		}
 		
 		div#paypalbtns {
-			background-color: azure;
+			background-color: powderblue;
 			padding:0.25em;
 		}
 		
@@ -60,15 +71,11 @@
 		var script = document.createElement('script');
 		script.setAttribute('src', PAYPAL_SCRIPT);
 		script.onload = function(){ 
-			document.getElementById('btn_validate').disabled = 
-			document.getElementById('btn_express').disabled = 
-			document.getElementById('btn_fluent').disabled = 
-			document.getElementById('btn_save').disabled =
-			document.getElementById('btn_restore').disabled =
-			false;
+			var btns = document.querySelectorAll("input[type='button']");
+			btns.forEach(function(node){node.disabled = false});
 		}
 		document.head.appendChild(script);
-		
+
 		
 		// set id in localstorage for future use
 		window.localStorage.setItem('net-tools/paypal-js:samples', document.getElementById('paypal_client_id').value);
@@ -105,7 +112,17 @@
 	
 	function captureKo(data)
 	{
-		document.getElementById('log').value = 'ko\n' + JSON.stringify(data);
+		console.log(data);
+		document.getElementById('log').value = 'ko\n' + JSON.stringify(data, null, 3);
+		reset();
+	}
+
+		
+	
+	function error(data)
+	{
+		console.log(data);
+		document.getElementById('log').value = "Exception of class '" + data.name + "'\n" + data.message;
 		reset();
 	}
 
@@ -113,163 +130,287 @@
 	
 	function pay_cart()
 	{
-		// reset buttons
-		reset();
-		document.getElementById('log').value = '';
-		
-		
-		// create shop and set currency code for all API calls
-		var shop = new NTPaypal.Shop('EUR');
-		
-		// create the customer
-		var cust = shop.newCustomer(v('cust_firstname'), {
-				surname : 		v('cust_surname'),
-				address1 : 		v('cust_address'), 
-				zipcode : 		v('cust_zipcode'),
-				city : 			v('cust_city'), 
-				countrycode : 	v('cust_country'),
-				email :		 	v('cust_email')
-			});
-		
-		if ( v('cust_mphone') )
+		try
 		{
-			cust.phone = v('cust_mphone');
-			cust.phone_type = 'MOBILE';
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+
+
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+
+			// create the customer
+			var cust = shop.newCustomer(v('cust_firstname'), {
+					surname : 		v('cust_surname'),
+					address1 : 		v('cust_address'), 
+					zipcode : 		v('cust_zipcode'),
+					city : 			v('cust_city'), 
+					countrycode : 	v('cust_country'),
+					email :		 	v('cust_email')
+				});
+
+			if ( v('cust_mphone') )
+			{
+				cust.phone = v('cust_mphone');
+				cust.phone_type = 'MOBILE';
+			}
+
+
+			// create the products
+			var p1 = shop.newProduct(v('p1_title'), v('p1_price'), 'PHYSICAL_GOODS', {
+					sku			: v('p1_sku'), 
+					tax			: v('p1_tax'), 
+					description	: v('p1_descr')
+				});
+			if ( v('p2_title') )
+				var p2 = shop.newProduct(v('p2_title'), v('p2_price'), 'DIGITAL_GOODS', {
+					sku			: v('p2_sku'), 
+					tax			: v('p2_tax'), 
+					description	: v('p2_descr')
+				});
+			else
+				var p2 = null;
+
+
+			// create shopping cart
+			var cart = shop.newCart(
+				p2 ? [shop.newProductQuantity(p1, v('p1_quantity')), shop.newProductQuantity(p2, v('p2_quantity'))] : [shop.newProductQuantity(p1, v('p1_quantity'))]);
+
+
+			// create order with shipping cost 0€
+			var order = shop.newOrder(cart, {
+					customer : cust,
+					shipping : 0,
+					description : 'Demo shopping cart content'
+				});
+
+
+			// define application
+			var app_ctx = document.getElementById('no_shipping').checked ? { shipping_preference : 'NO_SHIPPING' } : null;
+
+
+			// show paypal button
+			shop.paypalButtons(order, '#paypalbtns', app_ctx)
+				.then(captureOk)
+				.catch(captureKo);
 		}
-		
-		
-		// create the products
-		var p1 = shop.newItem(v('p1_title'), v('p1_quantity'), v('p1_price'), 'PHYSICAL_GOODS', {
-				sku			: v('p1_sku'), 
-				tax			: v('p1_tax'), 
-				description	: v('p1_descr')
-			});
-		if ( v('p2_title') )
-			var p2 = shop.newItem(v('p2_title'), v('p2_quantity'), v('p2_price'), 'DIGITAL_GOODS', {
-				sku			: v('p2_sku'), 
-				tax			: v('p2_tax'), 
-				description	: v('p2_descr')
-			});
-		else
-			var p2 = null;
-		
-		
-		// create shopping cart
-		var cart = shop.newCart(p2?[p1,p2]:[p1]);
-		
-		
-		// create order with shipping cost 0€
-		var order = shop.newOrder(cart, {
-				customer : cust,
-				shipping : 0,
-				description : 'Demo shopping cart content'
-			});
-		
-		
-		// define application
-		var app_ctx = document.getElementById('no_shipping').checked ? { shipping_preference : 'NO_SHIPPING' } : null;
-		
-		
-		// show paypal button
-		shop.paypalButtons(order, '#paypalbtns', app_ctx)
-			.then(captureOk)
-			.catch(captureKo);
+		catch(err)
+		{
+			error(err);
+		}
 	}
 		
 		
 		
 	function fluent()
 	{
-		// reset buttons
-		document.getElementById('paypalbtns').innerHTML = "";
-		document.getElementById('log').value = '';
-		
-		
-		// create shop and set currency code for all API calls
-		var shop = new NTPaypal.Shop('EUR');
-		
-		shop.sell(shop.product('Sample product 2', 10, 5.50, 'DIGITAL_GOODS').setSku('id_2').withDescription('Description of product 2'))
-				.to(shop.customer()
-						.named('Johnny', 'Donny')
-						.living('123, 3rd Avenue')
-						.in('75000', 'PARIS', 'FR')
-						.withEmail('johnny.donny@gmail.com')
-						.withPhone('0601020304', 'MOBILE')
-				)
-				.withShipping(14)
-				.withDescription('Shopping cart built with fluent API')
-				.withCustom_id('Invoice nABC123')
-			.payButtonsInside('#paypalbtns')
-				.set('shipping_preference', 'NO_SHIPPING')
-			.execute()
-		
-			.then(captureOk)
-			.catch(captureKo);		
+		try
+		{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+
+
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+
+			shop.sell(shop.product('Sample product 2', 5.50, 'DIGITAL_GOODS').setSku('id_2').withDescription('Description of product 2').setQuantity(10))
+//			shop.sell(shop.quantityOf(10, shop.product('Sample product 2', 5.50, 'DIGITAL_GOODS').setSku('id_2').withDescription('Description of product 2')))
+//			shop.sell(shop.product('Sample product 2', 5.50, 'DIGITAL_GOODS').setSku('id_2').withDescription('Description of product 2'))
+					.to(shop.customer()
+							.named('Johnny', 'Donny')
+							.living('123, 3rd Avenue')
+							.in('75000', 'PARIS', 'FR')
+							.withEmail('johnny.donny@gmail.com')
+							.withPhone('0601020304', 'MOBILE')
+					)
+					.withShipping(14)
+					.withDescription('Shopping cart built with fluent API')
+					.withCustom_id('Invoice nABC123')
+				.payButtonsInside('#paypalbtns')
+					.set('shipping_preference', 'NO_SHIPPING')
+				.execute()
+
+				.then(captureOk)
+				.catch(captureKo);		
+		}
+		catch(err)
+		{
+			error(err);
+		}
 	}
 		
 		
 		
 	function express()
 	{
-		// reset buttons
-		document.getElementById('paypalbtns').innerHTML = "";
-		document.getElementById('log').value = '';
-		
-		
-		// create shop and set currency code for all API calls
-		var shop = new NTPaypal.Shop('EUR');
-		shop.expressButtons('Express buy product 1', 10, null, '#paypalbtns')
-			.then(captureOk)
-			.catch(captureKo);
+		try
+		{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+
+
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+			shop.expressButtons('Express buy product 1', 10, null, '#paypalbtns')
+				.then(captureOk)
+				.catch(captureKo);
+		}
+		catch(err)
+		{
+			error(err);
+		}
 	}
 		
 		
 		
 	function save()
 	{
-		// reset buttons
-		reset();
-		document.getElementById('log').value = '';
-		
-		
-		// create shop and set currency code for all API calls
-		var shop = new NTPaypal.Shop('EUR');
-		
-		// create the products
-		var p = shop.newItem(v('p1_title'), v('p1_quantity'), v('p1_price'), 'PHYSICAL_GOODS', {
-				sku			: v('p1_sku'), 
-				tax			: v('p1_tax'), 
-				description	: v('p1_descr')
-			});
-		
-		// create shopping cart
-		var cart = shop.newCart([p]);
-		
-		// create session
-		var session = new NTPaypal.Session(shop, NTPaypal.CookiesStorage);
-		session.save(cart);
+		try
+		{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+
+
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+
+			// create the products
+			var p = shop.newProduct(v('p1_title'), v('p1_price'), 'PHYSICAL_GOODS', {
+					sku			: v('p1_sku'), 
+					tax			: v('p1_tax'), 
+					description	: v('p1_descr')
+				}).setQuantity(v('p1_quantity'));
+
+			// create shopping cart
+			var cart = shop.newCart([p]);
+
+			// create session
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
+			session.save(cart);
+		}
+		catch(err)
+		{
+			error(err);
+		}
 	}
 		
 		
 		
 	function restore()
 	{
-		// reset buttons
-		reset();
-		document.getElementById('log').value = '';
+		try
+		{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+
+
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+
+			// create session
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
+			var cart = session.restore();
+
+			document.getElementById('log').value = "Restoring cart from storage : " +
+				"\nCart instance of NTPaypal.Cart ? " + ((cart instanceof NTPaypal.Cart)?'yes':'no') +
+				"\nItem[0] instance of NTPaypal.ProductQuantity ? " + ((cart.inventory.items[0] instanceof NTPaypal.ProductQuantity)?'yes':'no') +
+				"\n\n" + JSON.stringify(cart, null, 3);
+		}
+		catch(err)
+		{
+			error(err);
+		}
+	}
 		
 		
-		// create shop and set currency code for all API calls
-		var shop = new NTPaypal.Shop('EUR');
 		
-		// create session
-		var session = new NTPaypal.Session(shop, NTPaypal.CookiesStorage);
-		var cart = session.restore();
+	function storeContent(showCart)
+	{
+		try
+		{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+
+
+			document.getElementById('log').value = "Store content : " +
+				"\n\n" + JSON.stringify(store, null, 3);
+			
+			if ( showCart )
+				document.getElementById('log').value += "\n\n\nCart content : " +
+				"\n\n" + JSON.stringify(cart, null, 3);
+		}
+		catch(err)
+		{
+			error(err);
+		}
+	}
 		
-		document.getElementById('log').value = "Restoring cart from storage : " +
-			"\nCart instance of NTPaypal.Cart ? " + ((cart instanceof NTPaypal.Cart)?'yes':'no') +
-			"\nItem [0] instance of NTPaypal.CartItem ? " + ((cart.items[0] instanceof NTPaypal.CartItem)?'yes':'no') +
-			"\n\n" + JSON.stringify(cart);
+		
+		
+	function inCart(sku)
+	{
+		store.addToCart(sku, cart);
+		storeContent(true);
+	}
+		
+		
+		
+	function updateCart(sku, n)
+	{
+		store.updateCartQuantity(sku, n, cart);
+		storeContent(true);
+	}
+		
+		
+		
+	function removeFromCart(sku)
+	{
+		store.removeFromCart(sku, cart);
+		storeContent(true);
+	}
+		
+		
+		
+	function payCart()
+	{
+		try
+		{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+
+
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+
+			shop.sell(cart)
+					.to(shop.customer()
+							.named('Johnny', 'Donny')
+							.living('123, 3rd Avenue')
+							.in('75000', 'PARIS', 'FR')
+							.withEmail('johnny.donny@gmail.com')
+							.withPhone('0601020304', 'MOBILE')
+					)
+					.withShipping(5)
+					.withDescription('Shopping cart built with fluent API')
+					.withCustom_id('Invoice nABC123')
+				.payButtonsInside('#paypalbtns')
+					.set('shipping_preference', 'NO_SHIPPING')
+				.execute()
+
+				.then(captureOk)
+				.catch(captureKo);		
+		}
+		catch(err)
+		{
+			error(err);
+		}
 	}
 		
 	</script>
@@ -319,13 +460,33 @@
 	</div>
 	
 	<div id="actions">
-		<label><input type="checkbox" value="1" id="no_shipping">No shipping</label>
-		<input type="button" value="Validate shopping cart" onclick="pay_cart();" id="btn_validate" disabled> 
-		<input type="button" value="Express buy 10€ (no cart)" onclick="express();" id="btn_express" disabled> 
-		<input type="button" value="69€ cart with fluent API" onclick="fluent();" id="btn_fluent" disabled>
-		<br>
-		<input type="button" value="Save cart with product 1 details to Session" onclick="save();" id="btn_save" disabled>
-		<input type="button" value="Restore cart from Session" onclick="restore();" id="btn_restore" disabled> (please set client-ID first above)
+		<p>Paypal API call with cart, no cart, fluent API : 
+		<label><input type="checkbox" value="1" id="no_shipping">No shipping</label>		
+		<input type="button" value="Validate shopping cart" onclick="pay_cart();" disabled> 
+		| <input type="button" value="Express buy 10€ (no cart)" onclick="express();"disabled> 
+		<input type="button" value="69€ cart with fluent API" onclick="fluent();" disabled>
+		</p>
+		
+		<p>
+		Save/Restore cart : <input type="button" value="Save cart with product 1 details to Session" onclick="save();" disabled>
+		<input type="button" value="Restore cart from Session" onclick="restore();" disabled> (please set client-ID first above)
+		</p>
+		
+		<p>
+		Store : <input type="button" value="Show store content" onclick="storeContent();" disabled>
+			- Product1
+				<input type="button" value="Add" onclick="inCart('prd_1');" disabled>
+				<input type="button" value="+" onclick="updateCart('prd_1', +1);" disabled>
+				<input type="button" value="-" onclick="updateCart('prd_1', -1);" disabled>
+				<input type="button" value="x" onclick="removeFromCart('prd_1');" disabled>
+			Product2
+				<input type="button" value="Add" onclick="inCart('prd_2');" disabled>
+				<input type="button" value="+" onclick="updateCart('prd_2', +1);" disabled>
+				<input type="button" value="-" onclick="updateCart('prd_2', -1);" disabled>
+				<input type="button" value="x" onclick="removeFromCart('prd_2');" disabled>
+			| 	<input type="button" value="Pay" onclick="payCart();" disabled>
+		</p>
+		
 	</div>
 	
 	<div id="paypalbtns"></div>
@@ -333,9 +494,29 @@
 	<textarea id="log"></textarea>
 	
 	<script>
+		
+	// restore paypal client ID saved to localStorage
 	var paypal_client_id = '';
 	if ( paypal_client_id = window.localStorage.getItem('net-tools/paypal-js:samples') )
 		document.getElementById('paypal_client_id').value = paypal_client_id;
+
+			
+		
+	// creating store with default products
+	try
+	{
+/*		var p1 = new NTPaypal.ProductQuantity(new NTPaypal.Product('store_product_1', 11.11, 'PHYSICAL_GOODS', 'EUR', { sku : 'prd_1' }), 2);
+		var p2 = new NTPaypal.ProductQuantity(new NTPaypal.Product('store_product_2', 22.22, 'PHYSICAL_GOODS', 'EUR', { sku : 'prd_2' }), 1);
+		
+		var store = new NTPaypal.Store([p1, p2]);*/
+		var store = NTPaypal.Store.fromJson('{"inventory":{"items":[{"product":{"title":"store_product_1","price":11.11,"category":"PHYSICAL_GOODS","tax":0,"description":"","sku":"prd_1","currency_code":"EUR"},"quantity":2},{"product":{"title":"store_product_2","price":22.22,"category":"PHYSICAL_GOODS","tax":0,"description":"","sku":"prd_2","currency_code":"EUR"},"quantity":1}]}}');
+		var cart = new NTPaypal.Cart([]);
+	}
+	catch(err)
+	{
+		error(err);
+	}
+		
 	</script>
 	
 </body>

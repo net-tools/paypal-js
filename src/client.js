@@ -52,7 +52,7 @@ NTPaypal.Product = function(title, price, category, currency_code, other){
 NTPaypal.Product.fromJson = function(obj)
 {
 	if ( typeof(obj) != 'object' )
-		throw new TypeError("'obj' parameter of 'fromJson' static method is not an object litteral");
+		throw new TypeError("'obj' parameter of 'Product.fromJson' static method is not an object litteral");
 
 	
 	// create an empty object (can't call regular constructor, as we don't know it's values yet)
@@ -178,7 +178,7 @@ NTPaypal.ProductQuantity = function(product, quantity)
 NTPaypal.ProductQuantity.fromJson = function(obj)
 {
 	if ( typeof(obj) != 'object' )
-		throw new TypeError("'obj' parameter of 'fromJson' static method is not an object litteral");
+		throw new TypeError("'obj' parameter of 'ProductQuantity.fromJson' static method is not an object litteral");
 
 	if ( !obj.product || !obj.product.sku )
 		throw new Error("'sku' property for product '" + obj.product.title + "' is mandatory when creating ProductQuantity object");
@@ -360,21 +360,20 @@ NTPaypal.Customer.prototype.withEmail = function(email){
 
 
 
-
 /**
- * Constructor of a shopping cart 
+ * Constructor of a ProductQuantity objects list
  *
  * @param null|ProductQuantity[] items Array of ProductQuantity objects ; content of shopping cart can be set later with add method instead of this items paremeters
  */
-NTPaypal.Cart = function(items){
+NTPaypal.Inventory = function(items){
 	
 	if ( (typeof(items) == 'object') && (items.constructor.name != 'Array') )
-		throw new TypeError("'items' parameter of 'Cart' constructor is not an array");
+		throw new TypeError("'items' parameter of 'Inventory' constructor is not an array");
 	
 
 	// checking array content
 	if ( items.length && !(items[0] instanceof NTPaypal.ProductQuantity) )
-		throw new TypeError("'items' parameter of 'Cart' constructor is not an array of ProductQuantity objects");
+		throw new TypeError("'items' parameter of 'Inventory' constructor is not an array of ProductQuantity objects");
 	
 	
 	this.items = items || [];
@@ -385,19 +384,17 @@ NTPaypal.Cart = function(items){
 /**
  * Static method to create an instance from a litteral object (read from json data)
  *
- * @param string jsonString
+ * @param object obj
  * @throws SyntaxError Raised if json string is malformed
  */
-NTPaypal.Cart.fromJson = function(jsonString)
+NTPaypal.Inventory.fromJson = function(obj)
 {
-	if ( typeof(jsonString) != 'string' )
-		throw new TypeError("'jsonString' parameter of 'fromJson' static method is not a string");
-	
-	
-	var obj = JSON.parse(jsonString);
-	
+	if ( typeof(obj) != 'object' )
+		throw new TypeError("'obj' parameter of 'Inventory.fromJson' static method is not an object litteral");
+
+
 	// create an empty object (can't call regular constructor, as we don't know it's values yet)
-	var o = Object.create(NTPaypal.Cart.prototype);
+	var o = Object.create(NTPaypal.Inventory.prototype);
 	
 	// takes property values from litteral object
 	// currently, obj.items is an array of object litteral, not ProductQuantity objects
@@ -409,9 +406,9 @@ NTPaypal.Cart.fromJson = function(jsonString)
 
 
 /**
- * Empty the cart
+ * Empty the list
  */
-NTPaypal.Cart.prototype.empty = function(){
+NTPaypal.Inventory.prototype.empty = function(){
 
 	this.items = [];
 
@@ -420,9 +417,11 @@ NTPaypal.Cart.prototype.empty = function(){
 
 
 /**
- * Get cart items line count (a product with quantity > 2 counts for 1)
+ * Get items count (a product with quantity >= 2 counts for 1)
+ *
+ * @return int
  */
-NTPaypal.Cart.prototype.count = function(){
+NTPaypal.Inventory.prototype.count = function(){
 
 	return this.items.length;
 }
@@ -430,18 +429,18 @@ NTPaypal.Cart.prototype.count = function(){
 
 
 /**
- * Add an item (Product object) to the cart, with a given quantity
+ * Add an item (Product object) to the inventory, with a given quantity
  *
- * If the product is already in the cart, its quantity is incremented by n
+ * If the product is already in the inventory, its quantity is incremented by n
  *
  * @param Product item Product object to add to the cart
  * @param int n Number of items to add (default 1)
  */
-NTPaypal.Cart.prototype.add = function(item, n){
+NTPaypal.Inventory.prototype.add = function(item, n){
 	
 	// checking parameters
 	if ( !(item instanceof NTPaypal.Product) )
-		throw new TypeError("'item' parameter of 'Cart.add' method is not an instance of 'Product'");
+		throw new TypeError("'item' parameter of 'Inventory.add' method is not an instance of 'Product'");
 	
 	
 	var n = n || 1;
@@ -463,11 +462,11 @@ NTPaypal.Cart.prototype.add = function(item, n){
 
 
 /**
- * Removes an item from the cart (no matter what is its quantity value)
+ * Removes an item from the inventory (no matter what is its quantity value)
  *
  * @param string sku
  */
-NTPaypal.Cart.prototype.remove = function(sku){
+NTPaypal.Inventory.prototype.remove = function(sku){
 	
 	// look for item with same sku in the cart ; if found, removing all quantities
 	var il = this.items.length;
@@ -482,12 +481,12 @@ NTPaypal.Cart.prototype.remove = function(sku){
 
 
 /**
- * Set a quantity for a product already added to the cart
+ * Set a quantity for a product already added to the inventory
  *
  * @param string sku
  * @param int quantity
  */
-NTPaypal.Cart.prototype.setQuantity = function(sku, quantity){
+NTPaypal.Inventory.prototype.setQuantity = function(sku, quantity){
 	
 	// look for item
 	this.get(sku).quantity = quantity;
@@ -496,12 +495,13 @@ NTPaypal.Cart.prototype.setQuantity = function(sku, quantity){
 
 
 /**
- * Look for a product SKU that may have already been added to the cart
+ * Look for a product SKU that may have already been added to the inventory
  *
  * @param string sku
- * @return false|ProductQuantity
+ * @return ProductQuantity
+ * @throw Error Thrown if item with given SKU not found
  */
-NTPaypal.Cart.prototype.get = function(sku){
+NTPaypal.Inventory.prototype.get = function(sku){
 		
 	var il = this.items.length;
 	for ( var i = 0 ; i < il ; i++ )
@@ -509,18 +509,18 @@ NTPaypal.Cart.prototype.get = function(sku){
 			return this.items[i];
 	
 	// if we arrive here, no product with matching sku found
-	throw new Error("Item with sku='" + sku + "' not found in cart");
+	throw new Error("Item with sku='" + sku + "' not found in inventory");
 }
 
 
 
 /**
- * Check if a product SKU has already been added to the cart
+ * Check if a product SKU has already been added to the inventory
  *
  * @param string sku
  * @return bool
  */
-NTPaypal.Cart.prototype.contains = function(sku){
+NTPaypal.Inventory.prototype.contains = function(sku){
 		
 	var il = this.items.length;
 	for ( var i = 0 ; i < il ; i++ )
@@ -533,6 +533,138 @@ NTPaypal.Cart.prototype.contains = function(sku){
 
 
 
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Constructor of a Cart object
+ *
+ * @param null|ProductQuantity[] items Array of ProductQuantity objects ; content of shopping cart can be set later with add method instead of this items paremeters
+ */
+NTPaypal.Cart = function(items){
+	
+	this.inventory = new NTPaypal.Inventory(items);
+}
+
+
+
+/**
+ * Static method to create an instance from a litteral object (read from json data)
+ *
+ * @param string jsonString
+ * @throws SyntaxError Raised if json string is malformed
+ */
+NTPaypal.Cart.fromJson = function(jsonString)
+{
+	if ( typeof(jsonString) != 'string' )
+		throw new TypeError("'jsonString' parameter of 'Cart.fromJson' static method is not a string");
+	
+	
+	var obj = JSON.parse(jsonString);
+	
+		
+	// create an empty object (can't call regular constructor, as we don't know it's values yet)
+	var o = Object.create(NTPaypal.Cart.prototype);
+	
+	// takes property values from litteral object
+	// currently, obj.items is an array of object litteral, not ProductQuantity objects
+	o.inventory = NTPaypal.Inventory.fromJson(obj.inventory);
+		
+	return o;
+}
+
+
+
+/**
+ * Empty the cart
+ */
+NTPaypal.Cart.prototype.empty = function(){
+
+	return this.inventory.empty();
+}
+
+
+
+/**
+ * Get items count (a product with quantity >= 2 counts for 1)
+ *
+ * @return int
+ */
+NTPaypal.Cart.prototype.count = function(){
+
+	return this.inventory.count();
+}
+
+
+
+/**
+ * Add an item (Product object) to the cart, with a given quantity
+ *
+ * If the product is already in the cart, its quantity is incremented by n
+ *
+ * @param Product item Product object to add to the cart
+ * @param int n Number of items to add (default 1)
+ */
+NTPaypal.Cart.prototype.add = function(item, n){
+	
+	return this.inventory.add(item, n);
+}
+
+
+
+/**
+ * Removes an item from the cart (no matter what is its quantity value)
+ *
+ * @param string sku
+ */
+NTPaypal.Cart.prototype.remove = function(sku){
+	
+	return this.inventory.remove(sku);
+}
+
+
+
+/**
+ * Set a quantity for a product already added to the cart
+ *
+ * @param string sku
+ * @param int quantity
+ */
+NTPaypal.Cart.prototype.setQuantity = function(sku, quantity){
+	
+	return this.inventory.setQuantity(sku, quantity);
+}
+
+
+
+/**
+ * Look for a product SKU that may have already been added to the cart
+ *
+ * @param string sku
+ * @return ProductQuantity
+ * @throw Error Thrown if item with given SKU not found
+ */
+NTPaypal.Cart.prototype.get = function(sku){
+		
+	return this.inventory.get(sku);
+}
+
+
+
+/**
+ * Check if a product SKU has already been added to the cart
+ *
+ * @param string sku
+ * @return bool
+ */
+NTPaypal.Cart.prototype.contains = function(sku){
+
+	return this.inventory.contains(sku);
+}
+
+
+
 /**
  * Convert a Cart object to Paypal order / 1 purchase unit
  *
@@ -541,9 +673,9 @@ NTPaypal.Cart.prototype.contains = function(sku){
 NTPaypal.Cart.prototype.toPaypalItems = function()
 {
 	var ret = [];
-	var il = this.items.length;
+	var il = this.count();
 	for ( var i = 0 ; i < il ; i++ )
-		ret.push(this.items[i].toPaypalItem());
+		ret.push(this.inventory.items[i].toPaypalItem());
 	
 	
 	return ret;
@@ -551,21 +683,7 @@ NTPaypal.Cart.prototype.toPaypalItems = function()
 
 
 
-/**
- * Get Cart content as an array of ProductQuantity objects
- * 
- * @return ProductQuantity[]
- */
-NTPaypal.Cart.prototype.getContent = function()
-{
-	return this.items;
-}
-
-
-
-
 // ----------------------------------------------------------------------
-
 
 
 
@@ -740,9 +858,9 @@ NTPaypal.Shop.prototype.newOrder = function(cart, other)
 
 
 /**
- * Create a shopping cart with items
+ * Create a shopping cart with ProductQuantity objects
  *
- * @param CartItem[] items Array of CartItem objects ; content of shopping cart can be set later with add method instead of this items paremeters
+ * @param ProductQuantity[] items Array of ProductQuantity objects
  */
 NTPaypal.Shop.prototype.newCart = function(items){
 	return new NTPaypal.Cart(items);
@@ -787,9 +905,9 @@ NTPaypal.Shop.prototype.paypalButtons = function(order, selector, application_co
 	{
 		// checking parameters
 		if ( !(order instanceof NTPaypal.Order) )
-			throw new TypeError("'order' parameter of 'paypalButton' function is not an instance of 'Order'");
+			throw new TypeError("'order' parameter of 'Shop.paypalButton' function is not an instance of 'Order'");
 		if ( !selector )
-			throw new Error("'selector' parameter of 'paypalButton' function not set");
+			throw new Error("'selector' parameter of 'Shop.paypalButton' function not set");
 
 
 
@@ -935,11 +1053,11 @@ NTPaypal.Shop.prototype.sell = function(items)
 
 	// checking we have an array, otherwise, it's an error
 	if ( !((typeof(items) == 'object') && (items.constructor.name == 'Array')) )
-		throw new TypeError("'items' parameter of 'sell' method is not an array");
+		throw new TypeError("'items' parameter of 'Shop.sell' method is not an array");
 		
 	// checking we have an array, otherwise, it's an error
 	if ( items.length && !(items[0] instanceof NTPaypal.ProductQuantity) )
-		throw new TypeError("'items' parameter of 'sell' method is not an array of ProductQuantity objects");
+		throw new TypeError("'items' parameter of 'Shop.sell' method is not an array of ProductQuantity objects");
 		
 
 	sale.cart = this.newCart(items);
@@ -978,7 +1096,7 @@ NTPaypal.Sale.prototype.to = function (customer){
 
 	// checking parameter
 	if ( customer && !(customer instanceof NTPaypal.Customer) )
-		throw new TypeError("'customer' parameter of 'to' method is not an instance of 'Customer'");
+		throw new TypeError("'customer' parameter of 'Sale.to' method is not an instance of 'Customer'");
 
 	this.customer = customer;
 	return this;
@@ -1038,10 +1156,10 @@ NTPaypal.Sale.prototype.payButtonsInside = function (selector){
 
 	// checking parameter
 	if ( !(typeof (selector) == 'string') )
-		throw new TypeError("'selector' parameter of 'payButtonsInside' method is not a string");
+		throw new TypeError("'selector' parameter of 'Sale.payButtonsInside' method is not a string");
 
 	if ( !selector )
-		throw new TypeError("'selector' parameter of 'payButtonsInside' method is not set");
+		throw new TypeError("'selector' parameter of 'Sale.payButtonsInside' method is not set");
 
 	return new NTPaypal.Payment(selector, this);
 }
@@ -1077,7 +1195,7 @@ NTPaypal.Payment.prototype.set = function(key, value) {
 	
 	// checking parameters
 	if ( !key || typeof(key) != 'string' )
-		throw new TypeError("'key' parameter of 'set' method is not set or not of type 'string'");
+		throw new TypeError("'key' parameter of 'Payment.set' method is not set or not of type 'string'");
 		
 	this.application_context = this.application_context || {};
 	this.application_context[key] = value;
@@ -1096,7 +1214,7 @@ NTPaypal.Payment.prototype.withApplicationContext = function(values) {
 	
 	// checking parameters
 	if ( !(typeof values == 'object') )
-		throw new TypeError("'values' parameter of 'withApplicationContext' method is not an object");
+		throw new TypeError("'values' parameter of 'Payment.withApplicationContext' method is not an object");
 		
 	this.application_context = values;
 	return this;
