@@ -381,7 +381,7 @@ NTPaypal.Session.prototype.save = function(cart)
 {
 	// checking parameter
 	if ( !(cart instanceof NTPaypal.Cart) )
-		throw new TypeError("'cat' parameter of 'save' method is not an instance of 'Cart'");
+		throw new TypeError("'cart' parameter of 'save' method is not an instance of 'Cart'");
 	
 	this.storage.set(this.shopname + '.cart', JSON.stringify(cart));
 }

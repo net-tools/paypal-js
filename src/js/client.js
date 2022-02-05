@@ -513,6 +513,18 @@ NTPaypal.Inventory.prototype.get = function(sku){
 
 
 /**
+ * Get cart content
+ *
+ * @return ProductQuantity[]
+ */
+NTPaypal.Inventory.prototype.getContent = function(){
+	
+	return this.items;
+}
+
+
+
+/**
  * Check if a product SKU has already been added to the inventory
  *
  * @param string sku
@@ -659,6 +671,18 @@ NTPaypal.Cart.prototype.get = function(sku){
 NTPaypal.Cart.prototype.contains = function(sku){
 
 	return this.inventory.contains(sku);
+}
+
+
+
+/**
+ * Get cart content
+ *
+ * @return ProductQuantity[]
+ */
+NTPaypal.Cart.prototype.getContent = function(){
+	
+	return this.inventory.getContent();
 }
 
 
