@@ -38,8 +38,6 @@ NTPaypal.Product = function(title, price, category, currency_code, other){
 		throw new Error("'category' parameter of 'Product' constructor not set");
 	if ( !this.currency_code )
 		throw new Error("'currency_code' parameter of 'Product' constructor not set");
-	if ( this.quantity <= 0 )
-		throw new Error("'quantity' parameter of 'Product' constructor is not in the allowed range");
 }
 
 
