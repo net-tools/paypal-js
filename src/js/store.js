@@ -406,3 +406,16 @@ NTPaypal.Session.prototype.restore = function()
 }
 
 
+
+/**
+ * Test storage for a previously saved session
+ * 
+ * @return bool
+ */
+NTPaypal.Session.prototype.hasData = function()
+{
+	// restoring carte from storage
+	return this.storage.get(this.shopname + '.cart') ? true : false;
+}
+
+
