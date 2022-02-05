@@ -6,9 +6,16 @@
 	"type": "library",
 	
 	"require" : {
-		"net-tools/js-core" : "^1.0.0"
+		"net-tools/js-core" : "^1.0.0",
+		"php": ">= 7.3"
 	},
 	
+	"autoload": {
+		"psr-4": {
+			"Nettools\\PaypalJs\\": "src/php/"
+		}
+    },
+    
     "license" : "MIT",
 
     "authors": [

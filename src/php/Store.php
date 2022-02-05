@@ -24,11 +24,11 @@ class Store {
 	/**
 	 * Constructor
 	 * 
-	 * @param Inventory $inventory
+	 * @param ProductQuantity[] $items
 	 */
-	public function __construct(Inventory $inventory)
+	public function __construct(array $items)
 	{
-		$this->inventory = $inventory;
+		$this->inventory = new Inventory($items);
 	}
 	
 }

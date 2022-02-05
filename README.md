@@ -5,8 +5,15 @@ Client-side JS library to manage a simple e-shop with shopping cart and Paypal
 ## Setup instructions
 
 To install net-tools/paypal-js package, just require it through composer and insert a script tag in the `HEAD` section :
+
 ```
-<script src="/path_to_vendor/net-tools/paypal-js/src/client.js"></script>
+<script src="/path_to_vendor/net-tools/paypal-js/src/js/client.js"></script>
+```
+
+Please not net-tools/js-core is also required :
+
+```
+<script src="/path_to_vendor/net-tools/js-core/src/js-core.js.min"></script>
 ```
 
 
@@ -281,6 +288,15 @@ var cart = s.restore();
 
 
 ## Managing store (stock) and cart
+
+### Loading script
+
+Store-related functions are in a separate javascript file : 
+
+```
+<script src="/path_to_vendor/net-tools/paypal-js/src/js/store.js"></script>
+```
+
 
 ### Creating store
 
