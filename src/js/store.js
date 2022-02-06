@@ -433,12 +433,14 @@ NTPaypal.Session.prototype.restore = function(store)
 		
 		var items = cart.getContent();		
 		var err_toremove = [];
+		var dirty = false;
 		
 		items.forEach(function(prd){
 			
 			// if store doesn't contain product anymore
 			if ( !store.contains(prd.product.sku) )
 			{
+				dirty = true;
 				err_toremove.push(prd.product.sku);
 				alert("Product '"  + prd.product.title + "' doesn't exist any more in store");
 			}
@@ -454,6 +456,7 @@ NTPaypal.Session.prototype.restore = function(store)
 					// cart.quantity > store.quantity
 					prd.quantity = prd.quantity + store.quantity;
 					pstore.quantity = 0;
+					dirty = true;
 					alert("Product '"  + prd.product.title + "' quantity updated to match lower quantity available in store");
 				}
 			}
@@ -464,6 +467,10 @@ NTPaypal.Session.prototype.restore = function(store)
 		err_toremove.forEach(function(sku){
 			cart.remove(sku);
 		});
+		
+		
+		if ( dirty )
+			this.save(cart);
 	}
 		
 	
