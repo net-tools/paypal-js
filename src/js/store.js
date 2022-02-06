@@ -63,6 +63,19 @@ NTPaypal.Store.prototype.get = function(sku){
 
 
 /**
+ * Check if a product SKU has already been added to the store
+ *
+ * @param string sku
+ * @return bool
+ */
+NTPaypal.Store.prototype.contains = function(sku){
+	
+	return this.inventory.contains(sku);
+}
+
+
+
+/**
  * Add a product from store to a shopping cart
  *
  * @param string sku
@@ -419,13 +432,37 @@ NTPaypal.Session.prototype.restore = function(store)
 
 		
 		var items = cart.getContent();		
+		var err_toremove = [];
 		
 		items.forEach(function(prd){
-			var pstore = store.get(prd.product.sku);
-			pstore.quantity -= prd.quantity;
 			
-			if ( pstore.quantity < 0 )
-				throw new Error("Cart quantity for product with SKU '" + prd.product.sku + "' doesn't match any more quantity available in store");
+			// if store doesn't contain product anymore
+			if ( !store.contains(prd.product.sku) )
+			{
+				err_toremove.push(prd.product.sku);
+				alert("Product '"  + prd.product.title + "' doesn't exist any more in store");
+			}
+			else
+			{
+				// store contains product
+				var pstore = store.get(prd.product.sku);
+				
+				// update quantities
+				pstore.quantity -= prd.quantity;
+				if ( pstore.quantity < 0 )
+				{
+					// cart.quantity > store.quantity
+					prd.quantity = prd.quantity + store.quantity;
+					pstore.quantity = 0;
+					alert("Product '"  + prd.product.title + "' quantity updated to match lower quantity available in store");
+				}
+			}
+		});
+		
+		
+		// if some items must be removed from cart
+		err_toremove.forEach(function(sku){
+			cart.remove(sku);
 		});
 	}
 		
