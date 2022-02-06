@@ -175,7 +175,10 @@ NTPaypal.Store.prototype.updateCartQuantity = function(sku, amount, cart)
 	
 	// if quantity = 0, removing all items from cart, that's easy
 	if ( n == 0 )
-		return this.removeFromCart(sku, cart);
+	{
+		this.removeFromCart(sku, cart);
+		return true;
+	}
 	
 	
 	// otherwise, call setCartQuantity with appropriate amount
