@@ -454,7 +454,7 @@ NTPaypal.Session.prototype.restore = function(store)
 				if ( pstore.quantity < 0 )
 				{
 					// cart.quantity > store.quantity
-					prd.quantity = prd.quantity + store.quantity;
+					prd.quantity = prd.quantity + pstore.quantity;
 					pstore.quantity = 0;
 					dirty = true;
 					alert("Product '"  + prd.product.title + "' quantity updated to match lower quantity available in store");
