@@ -384,7 +384,7 @@ NTPaypal.Session.prototype.save = function(cart)
 {
 	// checking parameter
 	if ( !(cart instanceof NTPaypal.Cart) )
-		throw new TypeError("'cart' parameter of 'save' method is not an instance of 'Cart'");
+		throw new TypeError("'cart' parameter of 'Session.save' method is not an instance of 'Cart'");
 	
 	this.storage.set(this.shopname + '.cart', JSON.stringify(cart));
 }
@@ -395,17 +395,42 @@ NTPaypal.Session.prototype.save = function(cart)
  * Restore cart from storage
  * 
  * @return Cart
+ * @throw Error Thrown if store quantities are not enough any more to supply the quantities in cart
  */
-NTPaypal.Session.prototype.restore = function()
+NTPaypal.Session.prototype.restore = function(store)
 {
 	// restoring carte from storage
 	var json = this.storage.get(this.shopname + '.cart');
 	if ( !json )
 		return new NTPaypal.Cart([]);
 	
+		
+	// if json data exists, read cart from storage
+	var cart = NTPaypal.Cart.fromJson(json);	
+		
 	
-	// if json data exists
-	return NTPaypal.Cart.fromJson(json);	
+	// if store set in parameter, adjusting store quantities with cart ; when we restore a cart from storage,
+	// quantities from store must be decremented according to quantities in cart
+	if ( store )
+	{
+		// checking parameter
+		if ( !(store instanceof NTPaypal.Store) )
+			throw new TypeError("'store' parameter of 'Session.restore' method is not an instance of 'Store'");
+
+		
+		var items = cart.getContent();		
+		
+		items.forEach(function(prd){
+			var pstore = store.get(prd.product.sku);
+			pstore.quantity -= prd.quantity;
+			
+			if ( pstore.quantity < 0 )
+				throw new Error("Cart quantity for product with SKU '" + prd.product.sku + "' doesn't match any more quantity available in store");
+		});
+	}
+		
+	
+	return cart;
 }
 
 
