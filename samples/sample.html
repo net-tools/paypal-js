@@ -309,9 +309,6 @@
 			document.getElementById('log').value = '';
 
 
-			// create shop and set currency code for all API calls
-			var shop = new NTPaypal.Shop('EUR');
-
 			// create session
 			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
 			var cart = session.restore();
@@ -329,7 +326,7 @@
 		
 		
 		
-	function storeContent(showCart)
+	function storeContent()
 	{
 		try
 		{
@@ -339,11 +336,27 @@
 
 
 			document.getElementById('log').value = "Store content : " +
-				"\n\n" + JSON.stringify(store, null, 3);
-			
-			if ( showCart )
-				document.getElementById('log').value += "\n\n\nCart content : " +
-				"\n\n" + JSON.stringify(cart, null, 3);
+				"\n\n" + JSON.stringify(__store, null, 3);
+		}
+		catch(err)
+		{
+			error(err);
+		}
+	}
+		
+		
+		
+	function cartContent()
+	{
+		try
+		{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+
+
+			document.getElementById('log').value += "Cart content : " +
+			"\n\n" + JSON.stringify(__cart, null, 3);
 		}
 		catch(err)
 		{
@@ -355,24 +368,123 @@
 		
 	function inCart(sku)
 	{
-		store.addToCart(sku, cart);
-		storeContent(true);
+		__store.addToCart(sku, __cart);
+		storeContent();
 	}
 		
 		
 		
 	function updateCart(sku, n)
 	{
-		store.updateCartQuantity(sku, n, cart);
-		storeContent(true);
+		__store.updateCartQuantity(sku, n, __cart);
+		storeContent();
 	}
 		
 		
 		
 	function removeFromCart(sku)
 	{
-		store.removeFromCart(sku, cart);
-		storeContent(true);
+		__store.removeFromCart(sku, __cart);
+		storeContent();
+	}
+		
+		
+		
+	function cartSave()
+	{
+		try
+		{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+
+
+			// create session
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
+			session.save(__cart);
+			
+			
+			document.getElementById('log').value = "Saving cart to storage : " +
+				"\n\n" + JSON.stringify(__cart, null, 3);
+		}
+		catch(err)
+		{
+			error(err);
+		}
+	}
+		
+	
+		
+	function storeTo1(sku)
+	{
+		// reset buttons
+		reset();
+		document.getElementById('log').value = '';
+
+		__store.get(sku).quantity = 1;
+		
+		storeContent();
+	}
+		
+		
+		
+	function resetStore()
+	{
+		// reset buttons
+		reset();
+		document.getElementById('log').value = '';
+		
+		__store = NTPaypal.Store.fromJson(__storeJson);		
+		
+		storeContent();
+	}
+		
+		
+		
+	function cartRestore()
+	{
+		try
+			{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+				
+				
+			// create session
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
+			__cart = session.restore(__store);
+
+				
+			document.getElementById('log').value = "Restoring cart from storage : " +
+				"\n\n" + JSON.stringify(__cart, null, 3);
+		}
+		catch(err)
+		{
+			error(err);
+		}
+	}
+		
+		
+		
+	function emptyStorage()
+	{
+		try
+		{
+			// reset buttons
+			reset();
+			document.getElementById('log').value = '';
+			
+			
+			// create session
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
+			session.delete();
+
+			document.getElementById('log').value = "Session deleted";
+		}
+		catch(err)
+		{
+			error(err);
+		}
 	}
 		
 		
@@ -389,7 +501,7 @@
 			// create shop and set currency code for all API calls
 			var shop = new NTPaypal.Shop('EUR');
 
-			shop.sell(cart)
+			shop.sell(__cart)
 					.to(shop.customer()
 							.named('Johnny', 'Donny')
 							.living('123, 3rd Avenue')
@@ -474,6 +586,7 @@
 		
 		<p>
 		Store : <input type="button" value="Show store content" onclick="storeContent();" disabled>
+				<input type="button" value="Show cart content" onclick="cartContent();" disabled>
 			- Product1
 				<input type="button" value="Add" onclick="inCart('prd_1');" disabled>
 				<input type="button" value="+" onclick="updateCart('prd_1', +1);" disabled>
@@ -484,6 +597,14 @@
 				<input type="button" value="+" onclick="updateCart('prd_2', +1);" disabled>
 				<input type="button" value="-" onclick="updateCart('prd_2', -1);" disabled>
 				<input type="button" value="x" onclick="removeFromCart('prd_2');" disabled>
+			-
+			Stock issues 
+				<input type="button" value="Save cart to storage" onclick="cartSave()" disabled>
+				<input type="button" value="Set store prd_1 to 1 item" onclick="storeTo1('prd_1')" disabled>
+				<input type="button" value="Empty storage" onclick="emptyStorage()" disabled>
+				<input type="button" value="Reset store" onclick="resetStore()" disabled>
+				<input type="button" value="Load cart from storage" onclick="cartRestore()" disabled>
+			
 			| 	<input type="button" value="Pay" onclick="payCart();" disabled>
 		</p>
 		
@@ -509,8 +630,9 @@
 		var p2 = new NTPaypal.ProductQuantity(new NTPaypal.Product('store_product_2', 22.22, 'PHYSICAL_GOODS', 'EUR', { sku : 'prd_2' }), 1);
 		
 		var store = new NTPaypal.Store([p1, p2]);*/
-		var store = NTPaypal.Store.fromJson('{"inventory":{"items":[{"product":{"title":"store_product_1","price":11.11,"category":"PHYSICAL_GOODS","tax":0,"description":"","sku":"prd_1","currency_code":"EUR"},"quantity":2},{"product":{"title":"store_product_2","price":22.22,"category":"PHYSICAL_GOODS","tax":0,"description":"","sku":"prd_2","currency_code":"EUR"},"quantity":1}]}}');
-		var cart = new NTPaypal.Cart([]);
+		var __storeJson = '{"inventory":{"items":[{"product":{"title":"store_product_1","price":11.11,"category":"PHYSICAL_GOODS","tax":0,"description":"","sku":"prd_1","currency_code":"EUR"},"quantity":2},{"product":{"title":"store_product_2","price":22.22,"category":"PHYSICAL_GOODS","tax":0,"description":"","sku":"prd_2","currency_code":"EUR"},"quantity":1}]}}';
+		var __store = NTPaypal.Store.fromJson(__storeJson);
+		var __cart = new NTPaypal.Cart([]);
 	}
 	catch(err)
 	{

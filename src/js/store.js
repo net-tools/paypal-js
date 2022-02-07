@@ -238,6 +238,17 @@ NTPaypal.BrowserStorage.prototype.get = function(key){
 
 
 /** 
+ * Abstract method for deleting a value from storage
+ *
+ * @param string key
+ */
+NTPaypal.BrowserStorage.prototype.delete = function(key){
+	throw new Error("'delete' method not implemented in class '" + this.constructor.name + "'");
+}
+
+
+
+/** 
  * Checking if a key exists in storage
  *
  * @param string key
@@ -287,6 +298,17 @@ NTPaypal.LocalStorage.prototype.get = function(key){
 
 
 
+/** 
+ * Deleting a value from storage
+ *
+ * @param string key
+ */
+NTPaypal.LocalStorage.prototype.delete = function(key){
+	return window.localStorage.removeItem(key);
+}
+
+
+
 // ----------------------------------------------------------------------
 
 
@@ -322,6 +344,17 @@ NTPaypal.SessionStorage.prototype.set = function(key, value){
  */
 NTPaypal.SessionStorage.prototype.get = function(key){
 	return window.sessionStorage.getItem(key);
+}
+
+
+
+/** 
+ * Deleting a value from storage
+ *
+ * @param string key
+ */
+NTPaypal.SessionStorage.prototype.delete = function(key){
+	return window.sessionStorage.removeItem(key);
 }
 
 
@@ -365,6 +398,17 @@ NTPaypal.CookiesStorage.prototype.get = function(key){
 
 
 
+/** 
+ * Deleting a value from storage
+ *
+ * @param string key
+ */
+NTPaypal.CookiesStorage.prototype.delete = function(key){
+	return nettools.jscore.deleteCookie(key);
+}
+
+
+
 // ----------------------------------------------------------------------
 
 
@@ -389,6 +433,18 @@ NTPaypal.Session = function(browserIntf, shopname){
 
 
 /**
+ * Delete current cart from storage
+ * 
+ * @param Cart cart
+ */
+NTPaypal.Session.prototype.delete = function()
+{
+	this.storage.delete(this.shopname + '.cart');
+}
+
+
+
+/**
  * Save current cart to storage
  * 
  * @param Cart cart
@@ -406,11 +462,18 @@ NTPaypal.Session.prototype.save = function(cart)
 
 /**
  * Restore cart from storage
+ *
+ * When restoring a cart from storage, and when store content is freshly loaded, the store quantities are those in stock, but don't match quantities in cart.
+ * We remind that only the cart is saved in the storage, not the store ; when adding a product from store to cart, the quantity in store is decremented, and the quantity
+ * in cart incremented. When loading the cart from storage, we have to update store quantities to reproduce the same behavior : Total_quantity = store_quantity + cart_quantity
+ * - To update the store (decrement its quantities) when loading the cart, set the 'store' parameter with a Store object
+ * - To handle edge cases, use the storeIntf object (store quantity not enough for cart quantities, cart product not found in store)
  * 
+ * @param Store store Store object (not mandatory ; if set, the quantities in store will be decremented to match real stock with cart content)
+ * @param SessionStoreInterface storeIntf Class to handle issues with store quantities when loading cart from storage (not mandatory)
  * @return Cart
- * @throw Error Thrown if store quantities are not enough any more to supply the quantities in cart
  */
-NTPaypal.Session.prototype.restore = function(store)
+NTPaypal.Session.prototype.restore = function(store, storeIntf)
 {
 	// restoring carte from storage
 	var json = this.storage.get(this.shopname + '.cart');
@@ -429,7 +492,17 @@ NTPaypal.Session.prototype.restore = function(store)
 		// checking parameter
 		if ( !(store instanceof NTPaypal.Store) )
 			throw new TypeError("'store' parameter of 'Session.restore' method is not an instance of 'Store'");
+		
+		
+		// if no store interface, creating default one
+		if ( !storeIntf )
+			storeIntf = new NTPaypal.SessionStoreInterface();
 
+		// checking parameter
+		if ( !(storeIntf instanceof NTPaypal.SessionStoreInterface) )
+			throw new TypeError("'storeIntf' parameter of 'Session.restore' method is not an instance of 'SessionStoreInterface'");
+		
+		
 		
 		var items = cart.getContent();		
 		var err_toremove = [];
@@ -437,18 +510,19 @@ NTPaypal.Session.prototype.restore = function(store)
 		
 		items.forEach(function(prd){
 			
-			// if store doesn't contain product anymore
-			if ( !store.contains(prd.product.sku) )
+			// if store doesn't contain product anymore or quantity is null
+			if ( !store.contains(prd.product.sku) || (store.get(prd.product.sku).quantity == 0) )
 			{
 				dirty = true;
 				err_toremove.push(prd.product.sku);
-				alert("Product '"  + prd.product.title + "' doesn't exist any more in store");
+				storeIntf.unavailable(prd.product);
 			}
 			else
 			{
 				// store contains product
 				var pstore = store.get(prd.product.sku);
 				
+
 				// update quantities
 				pstore.quantity -= prd.quantity;
 				if ( pstore.quantity < 0 )
@@ -457,7 +531,7 @@ NTPaypal.Session.prototype.restore = function(store)
 					prd.quantity = prd.quantity + pstore.quantity;
 					pstore.quantity = 0;
 					dirty = true;
-					alert("Product '"  + prd.product.title + "' quantity updated to match lower quantity available in store");
+					storeIntf.lowerQuantity(prd.product);
 				}
 			}
 		});
@@ -488,6 +562,62 @@ NTPaypal.Session.prototype.hasData = function()
 {
 	// restoring carte from storage
 	return this.storage.get(this.shopname + '.cart') ? true : false;
+}
+
+
+
+// ----------------------------------------------------------------------
+
+
+
+/**
+ * Class to handle issues with store when loading a cart from storage, and store quantities don't match those in the store anymore
+ * 
+ * @param function whenLowerQuantity Callback(Product product) to be called when quantity of a product in store is lower than the quantity in the cart
+ * @param function whenUnavailable Callback(Product product) to be called when a product in the cart is not in the store
+ */
+NTPaypal.SessionStoreInterface = function(whenLowerQuantity, whenUnavailable)
+{
+	this.whenLowerQuantity = whenLowerQuantity;
+	this.whenUnavailable = whenUnavailable;
+}
+
+
+
+/**
+ * Method to handle lower quantity issues
+ *
+ * @param Product prd
+ */
+NTPaypal.SessionStoreInterface.prototype.lowerQuantity = function(product)
+{
+	if ( !(product instanceof NTPaypal.Product) )
+		throw new TypeError("'product' parameter of 'SessionStoreInterface.lowerQuantity' method is not an instance of 'Product'");
+	
+	
+	if ( typeof(this.whenLowerQuantity) != 'function' )
+		alert("Product '"  + product.title + "' quantity updated to match lower quantity available in store");
+	else
+		this.whenLowerQuantity(product);
+}
+
+
+
+/**
+ * Method to handle issue when product in not available any more
+ *
+ * @param Product prd
+ */
+NTPaypal.SessionStoreInterface.prototype.unavailable = function(product)
+{
+	if ( !(product instanceof NTPaypal.Product) )
+		throw new TypeError("'product' parameter of 'SessionStoreInterface.unavailable' method is not an instance of 'Product'");
+		
+	
+	if ( typeof(this.whenUnavailable) != 'function' )
+		alert("Product '"  + product.title + "' is not currently available in store");
+	else
+		this.whenUnavailable(product);
 }
 
 
