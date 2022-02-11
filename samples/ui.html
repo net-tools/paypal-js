@@ -1,0 +1,286 @@
+<html>
+<head>
+	<script src="../../js-core/src/js-core.js.min"></script>
+	<script src="../src/js/client.js"></script>
+	<script src="../src/js/store.js"></script>
+	<script src="../src/js/ui.js"></script>
+	<link href="../src/js/ui.css" rel="stylesheet" type="text/css">
+	
+	<style>
+		body{
+			display: flex;
+			flex-direction: column;
+		}
+		
+		div#content {
+			margin-bottom: 1em;
+		}
+		
+		
+		div#content div label input {
+			background-color: antiquewhite;
+			border:1px solid dimgray;	
+		}
+		
+		div#content div label input[data-small='1']{
+			width:4em;
+		}
+		
+		div#actions{
+			padding:0.5em;
+		}
+		
+		div#actions p{		
+			background-color: whitesmoke;
+			padding:0.5em;
+			margin:0;
+		}
+		
+		div#actions p:nth-child(2n+1){		
+			background-color: gainsboro;
+		}
+		
+		textarea {
+			margin-top:2em;
+			height:30em;
+		}
+		
+		div#paypalbtns {
+			background-color: powderblue;
+			padding:0.25em;
+		}
+		
+		div#config {
+			display: flex;
+			flex-direction: column;
+			padding-bottom: 1em;
+			border-bottom: 2px solid black;
+		}
+		
+		div#config label {
+			display: flex;
+		}
+		
+		input#paypal_client_id {
+			flex-grow: 1;
+		}
+	</style>
+	
+	<script>
+	function apiload()
+	{
+		var PAYPAL_SCRIPT = 'https://www.paypal.com/sdk/js?currency=EUR&client-id=' + document.getElementById('paypal_client_id').value;
+		var script = document.createElement('script');
+		script.setAttribute('src', PAYPAL_SCRIPT);
+		script.onload = function(){ 
+			var btns = document.querySelectorAll("input[type='button']");
+			btns.forEach(function(node){node.disabled = false});
+		}
+		document.head.appendChild(script);
+
+		
+		// set id in localstorage for future use
+		window.localStorage.setItem('net-tools/paypal-js:samples', document.getElementById('paypal_client_id').value);
+	}
+		
+		
+		
+	function i18n_fr()
+	{
+		var script = document.createElement('script');
+		script.setAttribute('src', '../src/js/i18n-fr.js');
+		document.head.appendChild(script);
+	}
+		
+		
+		
+	function reset()
+	{
+		// reset paypal buttons
+		document.getElementById('paypalbtns').innerHTML = "";
+	}
+		
+		
+	
+	function captureOk(data)
+	{
+		var log = 'Paypal express buy process OK\nThe transaction number is ' + data.purchase_units[0].payments.captures[0].id + '\n';
+		log += JSON.stringify(data, null, 3);
+		document.getElementById('log').value = log;
+
+
+		// reset paypal buttons
+		reset();
+	}
+		
+		
+	
+	function captureKo(data)
+	{
+		console.log(data);
+		document.getElementById('log').value = 'ko\n' + JSON.stringify(data, null, 3);
+		reset();
+	}
+
+		
+	
+	function error(data)
+	{
+		console.log(data);
+		document.getElementById('log').value = "Exception of class '" + data.name + "'\n" + data.message;
+		reset();
+	}
+		
+		
+	
+	function dialog(carriers)
+	{
+		try
+		{
+			var ui = new NTPaypal.UI('#paypalbtns', __session,
+				{
+					onCountries : function()
+					{
+						return [{country:'United Kingdom',code:'GB'}, {country:'France', code:'FR', isDefault:true}];
+					},
+				
+					// onPaymentReceived
+					onPaymentReceived : function(cart, customer, paypal){ console.log(paypal); },
+
+					// onShippingCost
+					onShippingCost : carriers,
+				
+					// onCustomMessage
+					onCustomMessage : function(cart, customer) { return "Custom message here";}
+				});
+			ui.show();
+		}
+		catch (err)
+		{
+			error(err);
+		}
+	}
+		
+		
+		
+	function dialogCarrier0()
+	{
+		dialog(function(cart, customer) { return 0; });
+	}
+
+
+		
+	function dialogCarrierX()
+	{
+		dialog(function(cart, customer) { return 7.25; });
+	}
+
+
+		
+	function dialogCarrierLine()
+	{
+		dialog(function(cart, customer) { return [{carrier:'UPS', cost:25.75*cart.getContent().length}, {carrier:'Fedex', cost:35.25*cart.getContent().length}]; });
+	}
+
+
+		
+	function dialogCarrierChoice()
+	{
+		dialog(function(cart, customer) { return [{carrier:'UPS', cost:25.75/*, shipping_time:'24h'*/}, {carrier:'Fedex', cost:35.25, shipping_time:'72h'}]; });
+	}
+
+		
+		
+	function dialogImageCarrierLine()
+	{
+		var img1 = 'data:image/png;base64,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';
+		var img2 = 'data:image/png;base64,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';
+		dialog(function(cart, customer) { return [{carrier:'UPS', cost:25.75*cart.getContent().length, shipping_time:'24h', image:img1}, {carrier:'Fedex', cost:35.25*cart.getContent().length, shipping_time:'48h', image:img2}]; });
+	}
+
+		
+		
+	function dialogImageCarrierChoice()
+	{
+		var img1 = 'data:image/png;base64,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';
+		dialog(function(cart, customer) { return [{carrier:'UPS', cost:25.75, /*shipping_time:'24h', */image:img1}, {carrier:'Fedex', cost:35.25, shipping_time:'48h'}]; });
+	}
+
+		
+		
+	function dialogNoCarrier()
+	{
+		dialog();
+	}
+
+
+		
+		
+	</script>
+	
+</head>
+	
+<body>
+	<div id="config">
+		<label>Paypal Client-ID : <input type="text" name="paypal_client_id" id="paypal_client_id" placeholder="paypal client ID" ></label>
+		<label>Load API<input type="button" onclick="apiload();" value="Load API with Paypal client ID above"></label>
+	</div>
+	
+	<div id="actions">
+		<p>
+			<input type="button" value="Load i18n-fr" onclick="i18n_fr();"><br>
+			Dialog | Shipping cost <input type="button" value="0€" onclick="dialogCarrier0();">
+			<input type="button" value="7.25€" onclick="dialogCarrierX();">
+			- Carrier choice
+			<input type="button" value="€/line" onclick="dialogCarrierLine();">
+			<input type="button" value="listbox" onclick="dialogCarrierChoice();">
+			<input type="button" value="unset" onclick="dialogNoCarrier();">
+			- Image carrier choice : <input type="button" value="€/line" onclick="dialogImageCarrierLine();">
+			<input type="button" value="listbox" onclick="dialogImageCarrierChoice();">
+		</p>
+		
+	</div>
+	
+	<div id="paypalbtns"></div>
+	
+	
+	<textarea id="log"></textarea>
+	
+	<script>
+		
+	// restore paypal client ID saved to localStorage
+	var paypal_client_id = '';
+	if ( paypal_client_id = window.localStorage.getItem('net-tools/paypal-js:samples') )
+		document.getElementById('paypal_client_id').value = paypal_client_id;
+
+			
+		
+	// creating store with default products
+	try
+	{
+/*		var p1 = new NTPaypal.ProductQuantity(new NTPaypal.Product('store_product_1', 11.11, 'PHYSICAL_GOODS', 'EUR', { sku : 'prd_1' }), 2);
+		var p2 = new NTPaypal.ProductQuantity(new NTPaypal.Product('store_product_2', 22.22, 'PHYSICAL_GOODS', 'EUR', { sku : 'prd_2' }), 1);
+		
+		var store = new NTPaypal.Store([p1, p2]);*/
+		var __storeJson = '{"inventory":{"items":[{"product":{"title":"store_product_1","price":11.11,"category":"PHYSICAL_GOODS","tax":0,"description":"","sku":"prd_1","currency_code":"EUR"},"quantity":2},{"product":{"title":"store_product_2","price":22.22,"category":"PHYSICAL_GOODS","tax":0,"description":"","sku":"prd_2","currency_code":"EUR"},"quantity":1}]}}';
+		var __store = NTPaypal.Store.fromJson(__storeJson);
+		var __cart = new NTPaypal.Cart([]);
+		var __shop = new NTPaypal.Shop('EUR', 'Sample.web', 'Sample shop name');
+		var __session = new NTPaypal.Session(NTPaypal.SessionStorage, __shop, __cart, __store);
+		
+		__store.inventory.get('prd_1').product.tax = 5;
+		__store.addToCart('prd_1', __cart);
+		__store.addToCart('prd_2', __cart);
+		__session.save();
+		
+	}
+	catch(err)
+	{
+		error(err);
+	}
+		
+	</script>
+	
+</body>
+
+</html>

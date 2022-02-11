@@ -417,17 +417,30 @@ NTPaypal.CookiesStorage.prototype.delete = function(key){
  * Constructor for a class implementing a store/restore mechanism so that a shopping cart can be saved between page reloads, browsing, etc.
  *
  * @param BrowserStorage browserIntf Constructor for a BrowserStorage child class, implementing getter/setter to store and read values in browser session (cookies, localStorage, sessionStorage) ; d
- * @param string shopname
+ * @param Shop shop
+ * @param Cart cart
+ * @param Store store Store object, may be null if it's not required to deal with quantities when loading cart from storage
  */
-NTPaypal.Session = function(browserIntf, shopname){
+NTPaypal.Session = function(browserIntf, shop, cart, store){
 
 	// browserIntf is a class reference (such as NTPaypal.LocalStorage) ; creating an object of that class and check inheritance
 	this.storage = new browserIntf();	
 	if ( !(this.storage instanceof NTPaypal.BrowserStorage) )
-		throw new TypeError("'browserIntf' parameter of 'Session' object constructor is a constructor inheriting from 'BrowserStorage'")
+		throw new TypeError("'browserIntf' parameter of 'Session' object constructor is not a constructor inheriting from 'BrowserStorage'")
+	
+	if ( !(shop instanceof NTPaypal.Shop) )
+		throw new TypeError("'shop' parameter of 'Session' constructor is not a Shop instance");
+	
+	if ( !(cart instanceof NTPaypal.Cart) )
+		throw new TypeError("'cart' parameter of 'Session' constructor is not a Cart instance");
+
+	if ( store && !(store instanceof NTPaypal.Store) )
+		throw new TypeError("'store' parameter of 'Session' constructor is not a Store instance");
 	
 	
-	this.shopname = shopname || 'paypalshop';
+	this.cart = cart;
+	this.store = store;
+	this.shop = shop;
 }
 
 
@@ -439,23 +452,17 @@ NTPaypal.Session = function(browserIntf, shopname){
  */
 NTPaypal.Session.prototype.delete = function()
 {
-	this.storage.delete(this.shopname + '.cart');
+	this.storage.delete(this.shop.shopid + '.cart');
 }
 
 
 
 /**
  * Save current cart to storage
- * 
- * @param Cart cart
  */
-NTPaypal.Session.prototype.save = function(cart)
+NTPaypal.Session.prototype.save = function()
 {
-	// checking parameter
-	if ( !(cart instanceof NTPaypal.Cart) )
-		throw new TypeError("'cart' parameter of 'Session.save' method is not an instance of 'Cart'");
-	
-	this.storage.set(this.shopname + '.cart', JSON.stringify(cart));
+	this.storage.set(this.shop.shopid + '.cart', JSON.stringify(this.cart));
 }
 
 
@@ -469,31 +476,25 @@ NTPaypal.Session.prototype.save = function(cart)
  * - To update the store (decrement its quantities) when loading the cart, set the 'store' parameter with a Store object
  * - To handle edge cases, use the storeIntf object (store quantity not enough for cart quantities, cart product not found in store)
  * 
- * @param Store store Store object (not mandatory ; if set, the quantities in store will be decremented to match real stock with cart content)
  * @param SessionStoreInterface storeIntf Class to handle issues with store quantities when loading cart from storage (not mandatory)
  * @return Cart
  */
-NTPaypal.Session.prototype.restore = function(store, storeIntf)
+NTPaypal.Session.prototype.restore = function(storeIntf)
 {
 	// restoring carte from storage
-	var json = this.storage.get(this.shopname + '.cart');
+	var json = this.storage.get(this.shop.shopid + '.cart');
 	if ( !json )
-		return new NTPaypal.Cart([]);
+		return this.cart = new NTPaypal.Cart([]);
 	
 		
 	// if json data exists, read cart from storage
-	var cart = NTPaypal.Cart.fromJson(json);	
+	this.cart = NTPaypal.Cart.fromJson(json);	
 		
 	
 	// if store set in parameter, adjusting store quantities with cart ; when we restore a cart from storage,
 	// quantities from store must be decremented according to quantities in cart
-	if ( store )
+	if ( this.store )
 	{
-		// checking parameter
-		if ( !(store instanceof NTPaypal.Store) )
-			throw new TypeError("'store' parameter of 'Session.restore' method is not an instance of 'Store'");
-		
-		
 		// if no store interface, creating default one
 		if ( !storeIntf )
 			storeIntf = new NTPaypal.SessionStoreInterface();
@@ -504,14 +505,14 @@ NTPaypal.Session.prototype.restore = function(store, storeIntf)
 		
 		
 		
-		var items = cart.getContent();		
+		var items = this.cart.getContent();		
 		var err_toremove = [];
 		var dirty = false;
 		
 		items.forEach(function(prd){
 			
 			// if store doesn't contain product anymore or quantity is null
-			if ( !store.contains(prd.product.sku) || (store.get(prd.product.sku).quantity == 0) )
+			if ( !this.store.contains(prd.product.sku) || (this.store.get(prd.product.sku).quantity == 0) )
 			{
 				dirty = true;
 				err_toremove.push(prd.product.sku);
@@ -520,7 +521,7 @@ NTPaypal.Session.prototype.restore = function(store, storeIntf)
 			else
 			{
 				// store contains product
-				var pstore = store.get(prd.product.sku);
+				var pstore = this.store.get(prd.product.sku);
 				
 
 				// update quantities
@@ -534,21 +535,21 @@ NTPaypal.Session.prototype.restore = function(store, storeIntf)
 					storeIntf.lowerQuantity(prd.product);
 				}
 			}
-		});
+		}, this);
 		
 		
 		// if some items must be removed from cart
 		err_toremove.forEach(function(sku){
-			cart.remove(sku);
-		});
+			this.cart.remove(sku);
+		}, this);
 		
 		
 		if ( dirty )
-			this.save(cart);
+			this.save();
 	}
 		
 	
-	return cart;
+	return this.cart;
 }
 
 
@@ -561,7 +562,7 @@ NTPaypal.Session.prototype.restore = function(store, storeIntf)
 NTPaypal.Session.prototype.hasData = function()
 {
 	// restoring carte from storage
-	return this.storage.get(this.shopname + '.cart') ? true : false;
+	return this.storage.get(this.shop.shopid + '.cart') ? true : false;
 }
 
 

@@ -22,9 +22,9 @@ NTPaypal.Product = function(title, price, category, currency_code, other){
 	other = other || {};
 	
 	this.title = title;
-	this.price = price;
+	this.price = Number.parseFloat(price);
 	this.category = category;
-	this.tax = other.tax || 0;
+	this.tax = Number.parseFloat(other.tax) || 0;
 	this.description = other.description || '';
 	this.sku = other.sku || '';
 	this.currency_code = currency_code;
@@ -61,7 +61,7 @@ NTPaypal.Product.fromJson = function(obj)
 	o.price = obj.price;
 	o.category = obj.category;
 	o.tax = obj.tax;
-	o.withDescription = obj.description;
+	o.description = obj.description;
 	o.sku = obj.sku;
 	o.currency_code = obj.currency_code;
 	
@@ -162,7 +162,7 @@ NTPaypal.ProductQuantity = function(product, quantity)
 
 	
 	this.product = product;
-	this.quantity = quantity || 0;
+	this.quantity = Number.parseInt(quantity) || 0;
 }
 
 
@@ -227,8 +227,6 @@ NTPaypal.Customer = function(firstname, other)
 	
 	if ( !firstname )
 		throw new Error("'firstname' parameter of 'Customer' constructor not set");
-	if ( (other.phone && !other.phone_type) || (!other.phone && other.phone_type) )
-		throw new Error("'other.phone' and 'other.phone_type' parameters of 'Customer' constructor not set");
 	if ( other.city || other.zipcode || other.countrycode )
 	{
 		if ( !other.city || !other.zipcode || !other.countrycode )
@@ -487,7 +485,7 @@ NTPaypal.Inventory.prototype.remove = function(sku){
 NTPaypal.Inventory.prototype.setQuantity = function(sku, quantity){
 	
 	// look for item
-	this.get(sku).quantity = quantity;
+	this.get(sku).quantity = Number.parseInt(quantity);
 }
 
 
@@ -739,7 +737,7 @@ NTPaypal.Order = function(cart, currency_code, other){
 	this.customer = other.customer || null;
 	this.cart = cart;	
 	this.currency_code = currency_code;
-	this.shipping = other.shipping || 0;
+	this.shipping = Number.parseFloat(other.shipping) || 0;
 	this.description = other.description || '';
 	this.custom_id = other.custom_id || null;
 }
@@ -773,11 +771,11 @@ NTPaypal.Order.prototype.toPurchaseUnit = function()
 		description : this.description,
 		amount : {
 			currency_code : this.currency_code,
-			value : item_total + tax_total + this.shipping,
+			value : Number.parseFloat(item_total + tax_total + this.shipping).toFixed(2),
 			breakdown : {
-				item_total : { currency_code : this.currency_code, value : item_total },
-				tax_total : { currency_code : this.currency_code, value : tax_total },
-				shipping : { currency_code : this.currency_code, value : this.shipping }
+				item_total : { currency_code : this.currency_code, value : Number.parseFloat(item_total).toFixed(2) },
+				tax_total : { currency_code : this.currency_code, value : Number.parseFloat(tax_total).toFixed(2) },
+				shipping : { currency_code : this.currency_code, value : Number.parseFloat(this.shipping).toFixed(2) }
 			}
 		}
 	};
@@ -807,13 +805,16 @@ NTPaypal.Order.prototype.toPurchaseUnit = function()
  * Constructor of main facade object, used as a factory to create underlying objects 
  *
  * @param string currency_code 3-characters such as GBP, EUR, USD, etc.
+ * @param string shopname Description of shop (may be used to set a title for the order object sent to Paypal)
  */
-NTPaypal.Shop = function(currency_code)
+NTPaypal.Shop = function(currency_code, shopid, shopname)
 {
 	if ( !currency_code )
 		throw new Error("'currency_code' parameter of 'Shop' constructor not set");
 	
 	this.currency_code = currency_code;
+	this.shopid = shopid || 'NTPaypal.Shop';
+	this.shopname = shopname || '';
 }
 
 
@@ -952,13 +953,15 @@ NTPaypal.Shop.prototype.paypalButtons = function(order, selector, application_co
 				req.payer.email_address = order.customer.email;
 			}
 
-			if ( order.customer.phone && order.customer.phone_type )
+			if ( order.customer.phone )
 			{
 				req.payer = req.payer || {};
 				req.payer.phone = {
-						phone_number : { national_number : order.customer.phone },
-						phone_type : order.customer.phone_type
-					};
+						phone_number : { national_number : order.customer.phone }
+				}
+				
+				if ( order.customer.phone_type )
+					req.payer.phone.phone_type = order.customer.phone_type;
 			}
 		}
 
@@ -1134,7 +1137,7 @@ NTPaypal.Sale.prototype.to = function (customer){
  */
 NTPaypal.Sale.prototype.withShipping = function (cost){
 
-	this.shipping = cost;
+	this.shipping = Number.parseFloat(cost);
 	return this;
 }
 

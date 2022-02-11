@@ -1,0 +1,126 @@
+
+#NTPP_S_Cart_Content{
+    margin-left: auto;
+    margin-right: auto;
+	border-collapse: collapse;
+	margin-bottom: 2em;
+	width: 100%;
+}
+
+#NTPP_S_Cart_Content tbody{
+	font-family: Consolas, "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", Monaco, "Courier New", "monospace";
+}
+
+#NTPP_S_Cart_Content tbody,
+#NTPP_S_Cart_Content tfoot td:last-child{
+	font-size: 0.8em;
+}
+	
+#NTPP_S_Cart_Content tfoot td:last-child{
+	font-family: Consolas, "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", Monaco, "Courier New", "monospace";
+}
+
+#NTPP_S_Cart_Content_TaxLine td:nth-child(3){
+	font-weight: bold;
+}
+	
+#NTPP_S_Cart_Content thead tr {
+	font-family: inherit;
+} 
+	
+#NTPP_S_Cart_Content td, 
+#NTPP_S_Cart_Content th{
+	border:1px solid black;
+}				
+	
+#NTPP_S_Cart_Content td{
+	text-align: right;
+	padding-left:0.25em;
+	padding-top:0.5em;
+	padding-bottom:0.5em;
+	white-space: nowrap;
+	padding-right: 0.25em;
+}
+	
+#NTPP_S_Cart_Content tbody td:nth-child(2){			/* quantity */
+	text-align: center;
+	white-space: nowrap;
+}
+
+#NTPP_S_Cart_Content tbody td:nth-child(2) a{		/* button - or + */
+	border:1px solid black;
+	border-radius: 4px;
+    padding: 0 0.2em;
+    text-decoration: none;
+    font-family: monospace;	
+	color:black;
+}
+	
+#NTPP_S_Cart_Content tbody td:nth-child(2) a:first-of-type{		/* button - */
+	margin-right: 1.0em;
+}
+	
+#NTPP_S_Cart_Content tbody td:nth-child(2) a:last-of-type{		/* button + */
+	margin-left: 1.0em;
+}
+	
+#NTPP_S_Cart_Content tbody td:nth-child(1){			/* title */
+	text-align: left;
+	white-space: normal;
+}
+
+#NTPP_S_Cart_Content td:nth-child(3),			/* price and total */
+#NTPP_S_Cart_Content td:nth-child(4){
+	padding-right: 0.7em;
+}
+
+#NTPP_S_Cart_Content tfoot td {
+	border-width:0;
+}
+
+#NTPP_S_Cart_Content tfoot tr#NTPP_S_Cart_Content_TaxLine td:nth-child(n+3){
+	border-width:1px;
+}
+
+#NTPP_S_Cart_Content tfoot td#NTPP_S_Cart_Content_Total {
+	border-width:3px;
+	font-weight: bold;
+}
+
+#NTPP_f_shipping {								/* container page 2 shipping */
+	width:50%;
+}
+
+#NTPP_f_shipping p {
+	display: flex;
+}
+
+#NTPP_f_shipping p input {
+	flex-grow:1;
+}
+
+#NTPP_s3_shipping_cost,
+#NTPP_s3_total{
+	font-weight: bold;
+}
+
+#NTPP_s3_shipping{
+	border:1px solid black;
+	padding:0.25em;
+	width:55%;
+}
+
+#NTPP_s3_carrier_imageselect {
+	display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+}
+
+#NTPP_s3_carrier_imageselect label {
+	display: flex;
+	align-items: center;	
+}
+
+#NTPP_s3_carrier_imageselect label span {
+	padding-left:0.25em;
+}

@@ -268,17 +268,16 @@ page loads, reloads etc.
 The NTPaypal client library provides 3 storage strategies : cookies (cart content lost when browser is closed), localStorage (cart content never lost), 
 sessionStorage (cart content lost when page, not browser is closed).
 
-To save the cart content to browser storage, a Session object must be created with appropriate parameters ; then the `save` method is called with a Cart object. 
-To restore data, `restore` method should be called.
+To save the cart content to browser storage, a Session object must be created with appropriate parameters ; then the `save` method is called. To restore data, `restore` method should be called.
 
 ```
-
 // creating session
 // save/restore will be done through CookiesStorage interface (please note that you mustn't create a CookiesStorage object with new keyword, just pass the constructor reference)
-var s = new NTPaypal.Session(NTPaypal.CookiesStorage);
+// create new Session object, with storage interface constructor, shop/cart/store objects
+var s = new NTPaypal.Session(NTPaypal.CookiesStorage, shop, cart);
 
 // saving a previously created Cart object
-s.save(cart);
+s.save();
 
 // ...... some time later
 var cart = s.restore();
@@ -384,6 +383,96 @@ store.setCartQuantity('prd_1', 5, cart);
 store.updateCartQuantity('prd_2', -1, cart);
 ```
 
+
+### Loading cart from storage with stock management
+
+If managing store quantities, store must be updated when loading a cart from storage, so that available quantities in store match total quantities minus quantities in cart.
+
+To do so, Session object must be created with a Store object parameter, and a SessionStoreInterface object implementing callbacks to deal with specific cases must be passed to restore method.
+
+```
+// creating session
+var s = new NTPaypal.Session(NTPaypal.CookiesStorage, shop, cart, store);
+
+// ...... some time later
+var cart = s.restore(new NTPaypal.SessionStoreInterface(
+		function(product)
+		{
+			// deal with lower quantity available issues
+		},
+		
+		function(product)
+		{
+			// deal with product unavailable issues
+		}
+	));
+
+```
+
+
+## Using UI
+
+A Javascript simple cart/shipping/confirm UI is provided. It makes it possible, in 3 consecutive screens, to :
+- show cart content (increment/decrement quantities of items already in cart)
+- ask for shipping details
+- prompt user for carrier selection (not mandatory), require Terms of Sales agreement and show Paypal buttons
+
+Default UI language is English, but translations can be easily implemented (see provided French translations in `i18n-fr.js` file).
+
+Although the UI script is quite big (in separate `ui.js` file), the use is rather simple, with few mandatory parameters.
+
+```
+var ui = new NTPaypal.UI("#container", session, {
+		
+	// get a list of countries available for user shipping ; returns an array of object litterals (country, code, isDefault)
+	onCountries : function(cart, customer){
+		return [ {country:'USA', code:'US', isDefault:true}, {country:'United Kingdom', code:'GB'} ];
+	},
+
+
+	// do some stuff when payment done
+	onPaymentReceived : function(cart, customer, paypalData){
+		alert("Payment done with paypal transaction id " + paypalData.purchase_units[0].payments.captures[0].id);
+	},
+
+
+	// return a float with shipping cost for cart/customer
+	onShippingCost : function(cart, customer){
+		return 12.32;
+	},
+
+
+	// return a custom message displayed above buttons
+	onCustomMessage : function(cart, customer){
+		return "This is a custom message";
+	}
+});
+
+
+ui.show();
+```
+
+With the above example, the `onShippingCost` callback returns a float with a defined shipping cost (may be 0) ; we can ask the user to choose
+its carrier. A carrier is defined by a name, a cost, a shipping_time, an image ; last 2 parameters are not mandatory.
+
+```
+// returning an array of carriers, ie object litterals (carrier, cost, shipping_time, image)
+onShippingCost : function(cart, customer){
+	return [ {carrier:"DHL", cost:24.50, shipping_time:"2 days"}, {carrier:"UPS", cost:20.89, shipping_time:"1 day"} ];
+},
+```
+
+With the above code, the user will choose the carrier through a list box.
+
+If preferred, the user can choose the carrier by clicking on radio buttons linked to carrier icons :
+
+```
+// returning an array of carriers, ie object litterals (carrier, cost, shipping_time, image)
+onShippingCost : function(cart, customer){
+	return [ {carrier:"DHL", cost:24.50, image:"url"}, {carrier:"UPS", cost:20.89, image:"data:image/png;base64,xxxxxxx"} ];
+},
+```
+To replace the list box with radio buttons and images, we add a property `image` (may link to an URL or can be a base64 encoded data string).
 
 
 

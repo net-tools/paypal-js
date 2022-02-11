@@ -289,8 +289,8 @@
 			var cart = shop.newCart([p]);
 
 			// create session
-			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
-			session.save(cart);
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage, shop, cart);
+			session.save();
 		}
 		catch(err)
 		{
@@ -309,8 +309,11 @@
 			document.getElementById('log').value = '';
 
 
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+
 			// create session
-			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage, shop, shop.newCart([]));
 			var cart = session.restore();
 
 			document.getElementById('log').value = "Restoring cart from storage : " +
@@ -399,9 +402,12 @@
 			document.getElementById('log').value = '';
 
 
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+
 			// create session
-			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
-			session.save(__cart);
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage, shop, __cart);
+			session.save();
 			
 			
 			document.getElementById('log').value = "Saving cart to storage : " +
@@ -450,9 +456,13 @@
 			document.getElementById('log').value = '';
 				
 				
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+
+
 			// create session
-			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
-			__cart = session.restore(__store);
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage, shop, shop.newCart([]), __store);
+			__cart = session.restore();
 
 				
 			document.getElementById('log').value = "Restoring cart from storage : " +
@@ -474,9 +484,12 @@
 			reset();
 			document.getElementById('log').value = '';
 			
+			// create shop and set currency code for all API calls
+			var shop = new NTPaypal.Shop('EUR');
+
 			
 			// create session
-			var session = new NTPaypal.Session(NTPaypal.SessionStorage);
+			var session = new NTPaypal.Session(NTPaypal.SessionStorage, shop, __cart, __store);
 			session.delete();
 
 			document.getElementById('log').value = "Session deleted";
