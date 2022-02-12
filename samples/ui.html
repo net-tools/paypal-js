@@ -144,14 +144,33 @@
 						return [{country:'United Kingdom',code:'GB'}, {country:'France', code:'FR', isDefault:true}];
 					},
 				
+				
 					// onPaymentReceived
-					onPaymentReceived : function(cart, customer, paypal){ console.log(paypal); },
+					//onPaymentReceived : function(cart, customer, paypal){ console.log(paypal); alert('Payment done !');},
+					onPaymentReceived : function(cart, customer, paypal){
+						return new Promise(function(resolve, reject){
+							console.log(paypal); alert('Inside Promise construction, payment done !');
+							
+							// now we can empty session and cart
+							resolve();
+						});
+					},
+				
+				
+					// onPaymentCompleted
+					onPaymentCompleted : function()
+					{
+						alert('UI has been closed and session cleared');
+					},
 
+				
 					// onShippingCost
 					onShippingCost : carriers,
 				
+				
 					// onCustomMessage
 					onCustomMessage : function(cart, customer) { return "Custom message here";},
+				
 				
 					// TOS link
 					TOSLink : { url : 'https://www.google.fr', title: 'Link to Terms of Sales here' }

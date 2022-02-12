@@ -81,11 +81,12 @@ NTPaypal.i18n = {
  * Constructor of a UI top object
  *
  * params is an object litteral that may have following properties (callbacks) and parameters
- * - onCountries : function() : [{country, code, isDefault}],
- * - onPaymentReceived : function(cart, customer, paypalData)
- * - onShippingCost : function(cart, customer) : float|[{carrier, cost, shipping_time, image}]
- * - onCustomMessage : function(cart, customer) : string
- * - TOSLink : {title, url}
+ * - onCountries : function() : [{country, code, isDefault}] ; get a list of countries
+ * - onPaymentReceived : function(cart, customer, paypalData) : null|Promise ; do some client-side stuff and return a Promise resolved when it's done (so that UI) will chain on cleaning stuff
+ * - onPaymentCompleted : function() ; implement client-side behavior when closing UI, after successfull payment completion (call after onPaymentReceived)
+ * - onShippingCost : function(cart, customer) : float|[{carrier, cost, shipping_time, image}] ; get shipping cost, either as a float or an array of carriers/costs
+ * - onCustomMessage : function(cart, customer) : string ; display custom message at the confirmation screen
+ * - TOSLink : {title, url} ; display a link to TOS stuff
  *
  * @param string selector CSS-like selector to identify the tag where the cart/delivery options/confirm screen should be rendered
  * @param Session session Session object with its properties cart, shop, store set with appropriate objects
@@ -118,6 +119,9 @@ NTPaypal.UI = function(selector, session, params){
 	if ( params.onPaymentReceived && !(typeof(params.onPaymentReceived) == 'function') )
 		throw new TypeError("'params.onPaymentReceived' parameter of 'UI' constructor method is not function");
 	
+	if ( params.onPaymentCompleted && !(typeof(params.onPaymentCompleted) == 'function') )
+		throw new TypeError("'params.onPaymentCompleted' parameter of 'UI' constructor method is not function");
+	
 	if ( params.onCustomMessage && !(typeof(params.onCustomMessage) == 'function') )
 		throw new TypeError("'params.onCustomMessage' parameter of 'UI' constructor method is not function");
 	
@@ -125,6 +129,7 @@ NTPaypal.UI = function(selector, session, params){
 	this.session = session;
 	this.onCountries = params.onCountries;
 	this.onPaymentReceived = params.onPaymentReceived;
+	this.onPaymentCompleted = params.onPaymentCompleted;
 	this.onShippingCost = params.onShippingCost;
 	this.onCustomMessage = params.onCustomMessage;
 	
@@ -210,7 +215,7 @@ NTPaypal.UI.prototype.show = function()
 	// render sections
 	_ui_s1 = new NTPaypal.UI.Section1_Cart(_sect1_cart, this.session, __toShipping);
 	_ui_s2 = new NTPaypal.UI.Section2_Shipping(_sect2_shipping, __toCart, __toConfirm, this.onCountries);
-	_ui_s3 = new NTPaypal.UI.Section3_Confirm(_sect3_confirm, this.session, _ui_s2, __toCart, __toShipping, this.TOSLink, this.onShippingCost, this.onCustomMessage, this.onPaymentReceived);
+	_ui_s3 = new NTPaypal.UI.Section3_Confirm(_sect3_confirm, this.session, _ui_s2, __toCart, __toShipping, this.TOSLink, this.onShippingCost, this.onCustomMessage, this.onPaymentReceived, this.onPaymentCompleted);
 	_ui_s1.render();
 	_ui_s2.render();
 	_ui_s3.render();
@@ -528,12 +533,12 @@ NTPaypal.UI.Section2_Shipping = function(section, back, next, onCountries)
  * @param function backToCart Function to call to pass control back to "section 1 / cart"
  * @param function backToShipping Function to call to pass control back to "section 2 / shipping"
  * @param null|object TOSLink Objet litteral {title, url} to provide a link and title to Terms Of Sales file, or null if not required
- * @param function onShippingCost Callback function(cart, customer) : float|array returning shipping cost (float or array of object litteral {carrier, cost, shipping_time, image})
- * @param function onCustomMessage Callback function(cart, customer) : string returning custom message 
- * @param function onPaymentReceived Callback function(cart, customer, paypalData)
- 
+ * @param function onShippingCost Callback function(cart, customer) : float|array ; returning shipping cost (float or array of object litteral {carrier, cost, shipping_time, image})
+ * @param function onCustomMessage Callback function(cart, customer) : string ; returning custom message 
+ * @param function onPaymentReceived Callback function(cart, customer, paypalData) : null|Promise ; returning to the API a Promise to be resolved when client-side has finished handling paypal returned data
+ * @param function onPaymentCompleted Callback function() ; implement client-side behavior when closing UI, after successfull payment completion (call after onPaymentReceived)
  */
-NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backToCart, backToShipping, TOSLink, onShippingCost, onCustomMessage, onPaymentReceived)
+NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backToCart, backToShipping, TOSLink, onShippingCost, onCustomMessage, onPaymentReceived, onPaymentCompleted)
 {
 	// call a user callback function to get either a float with shipping cost, or an array of (string carrier, float cost, string shipping_time, string image) object litterals 
 	// so that the user can choose its carrier
@@ -560,9 +565,57 @@ NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backTo
 	
 	
 	
+	// call user-defined function when payment done, and maybe get a Promise to chain with after client-side processing is done
+	function __getOnPaymentReceivedPromise(customer, data)
+	{
+		// if callback payment received not defined, create dummy one and display 'thank you message payment received'
+		if ( typeof(onPaymentReceived) != 'function' )
+		{
+			alert(NTPaypal.i18n.ui.SECTION3_CONFIRM.payment_received);
+			return Promise.resolve();
+		}
+		
+		
+		// otherwise, call user defined callback and maybe get a Promise as return
+		var pr = onPaymentReceived(session.cart, customer, data);
+		return (pr instanceof Promise) ? pr : Promise.resolve();
+	}
+	
+	
+	
 	// draw paypal buttons
 	function __paypal()
 	{
+		function ___paymentCapture(customer, data)
+		{
+			function ____resetSession()
+			{
+				session.cart.empty();
+				session.delete();
+			}
+			
+			
+			function ____closeUI()
+			{
+				// closing UI
+				section.parentNode.innerHTML = '';
+
+				// user defined callback to close payment, such as redirecting to 'thank you' page
+				if ( typeof(onPaymentCompleted) == 'function' )
+					onPaymentCompleted();
+			}
+			
+			
+			
+			// call user callback or if it's not defined, a dummy Promise so that we can chain
+			__getOnPaymentReceivedPromise(customer, data)
+				.then(____resetSession)
+				.then(____closeUI)
+				.catch(___error);
+		}
+		
+		
+		
 		function ___error(err)
 		{
 			console.log(err);
@@ -635,11 +688,8 @@ NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backTo
 						// on payment success, removing paypal buttons
 						paypal_div.innerHTML = '';
 
-						// callback to process payement or default "payment received thank you" message
-						if ( typeof (onPaymentReceived) == 'function' )
-							onPaymentReceived(session.cart, cust, data);
-						else
-							alert(NTPaypal.i18n.ui.SECTION3_CONFIRM.payment_received);
+						// callback to process payment, with chaining to session AND ui cleaning
+						___paymentCapture(cust, data);
 					})
 				.catch(___error);		
 
@@ -722,7 +772,7 @@ NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backTo
 		var toslnk = section.querySelector('#NTPP_s3_tos_link');
 		toslnk.style.display = (TOSLink && TOSLink.url) ? 'block' : 'none';
 		if ( TOSLink && TOSLink.url )
-			toslnk.innerHTML = `<a href="${TOSLink.url}">${TOSLink.title ? TOSLink.title : TOSLink.url}</a>`;
+			toslnk.innerHTML = `<a href="${TOSLink.url}" target="_blank">${TOSLink.title ? TOSLink.title : TOSLink.url}</a>`;
 	}
 	
 	

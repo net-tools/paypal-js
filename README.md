@@ -436,6 +436,14 @@ var ui = new NTPaypal.UI("#container", session, {
 	onPaymentReceived : function(cart, customer, paypalData){
 		alert("Payment done with paypal transaction id " + paypalData.purchase_units[0].payments.captures[0].id);
 	},
+	
+	
+	// do some stuff after 'payment done' called, during process cleaning
+	onPaymentCompleted : function()
+	{
+		alert('Thanks you, now redirecting you to home page');
+		document.location = '/';
+	},
 
 
 	// return a float with shipping cost for cart/customer
@@ -485,4 +493,31 @@ To replace the list box with radio buttons and images, we add a property `image`
 
 Some base64-encoded images are provided inside the `carriers.json` file ; it's advised to copy/paste the required images inside your code, there's no
 point including that big file with multiple carriers icons whereas you may only need one or two icons.
+
+
+
+### Advanced use : implement asynchronous onPaymentReceived handler
+
+In the above example, `onPaymentReceived` handler is called, executed, and upon its completion, control returns to ui.js script, that will chain on 
+cart and session cleaning.
+
+If some asynchronous tasks must be done client side inside `onPaymentReceived`, cleaning cart and session before completion of this async task may be wrong.
+
+In that case, `onPaymentReceived` must return a Promise that will be resolved when the ui.js can chain on cleaning (in other words, when client-side task is completed).
+For example, if calling some server-side script with Fetch API inside `onPaymentReceived`, we may call the `resolve` method of Promise construction as the
+`then` argument when chaining on fetch() :
+
+```
+onPaymentReceived : function(cart, customer, paypal){
+		return new Promise(function(resolve, reject){
+			console.log(paypal); alert('Payment done, calling server-side script with Fetch API !');
+
+			fetch('/path/to/script.php', {paypal_id : paypal.purchase_units[0].payments.captures[0].id})
+				.then(resolve)
+				.catch(reject);
+		});
+	},
+```
+
+
 
