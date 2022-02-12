@@ -88,7 +88,7 @@
 }
 
 #NTPP_f_shipping {								/* container page 2 shipping */
-	width:50%;
+	width:55%;
 }
 
 #NTPP_f_shipping p {
@@ -97,6 +97,7 @@
 
 #NTPP_f_shipping p input {
 	flex-grow:1;
+	margin-left:0.2em;
 }
 
 #NTPP_s3_shipping_cost,
@@ -107,7 +108,8 @@
 #NTPP_s3_shipping{
 	border:1px solid black;
 	padding:0.25em;
-	width:55%;
+	width:60%;
+    white-space: pre-wrap;
 }
 
 #NTPP_s3_carrier_imageselect {
