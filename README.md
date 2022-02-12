@@ -412,6 +412,8 @@ var cart = s.restore(new NTPaypal.SessionStoreInterface(
 
 ## Using UI
 
+### Basic knowledge 
+
 A Javascript simple cart/shipping/confirm UI is provided. It makes it possible, in 3 consecutive screens, to :
 - show cart content (increment/decrement quantities of items already in cart)
 - ask for shipping details
@@ -445,12 +447,19 @@ var ui = new NTPaypal.UI("#container", session, {
 	// return a custom message displayed above buttons
 	onCustomMessage : function(cart, customer){
 		return "This is a custom message";
-	}
+	},
+	
+	
+	// display a link to Terms of Sales (not mandatory)
+	TOSLink : { url : 'https://XXXXXXX', title:'Terms Of Sales : click here' }
 });
 
 
 ui.show();
 ```
+
+
+### Advanced use : asking user choice for carriers
 
 With the above example, the `onShippingCost` callback returns a float with a defined shipping cost (may be 0) ; we can ask the user to choose
 its carrier. A carrier is defined by a name, a cost, a shipping_time, an image ; last 2 parameters are not mandatory.
@@ -474,5 +483,6 @@ onShippingCost : function(cart, customer){
 ```
 To replace the list box with radio buttons and images, we add a property `image` (may link to an URL or can be a base64 encoded data string).
 
-
+Some base64-encoded images are provided inside the `carriers.json` file ; it's advised to copy/paste the required images inside your code, there's no
+point including that big file with multiple carriers icons whereas you may only need one or two icons.
 

@@ -80,13 +80,20 @@ NTPaypal.i18n = {
 /**
  * Constructor of a UI top object
  *
+ * params is an object litteral that may have following properties (callbacks) and parameters
+ * - onCountries : function() : [{country, code, isDefault}],
+ * - onPaymentReceived : function(cart, customer, paypalData)
+ * - onShippingCost : function(cart, customer) : float|[{carrier, cost, shipping_time, image}]
+ * - onCustomMessage : function(cart, customer) : string
+ * - TOSLink : {title, url}
+ *
  * @param string selector CSS-like selector to identify the tag where the cart/delivery options/confirm screen should be rendered
  * @param Session session Session object with its properties cart, shop, store set with appropriate objects
- * @param object events Object litteral with callback properties onCountries():[(country, code, isDefault)], onPaymentReceived(cart, customer, paypalData), onShippingCost(cart, customer):float|[(carrier, cost, shipping_time, image)], onCustomMessage(cart, customer):string
+ * @param object params Object litteral with callback properties and not mandatory parameters 
  */
-NTPaypal.UI = function(selector, session, events){
+NTPaypal.UI = function(selector, session, params){
 	
-	events = events || {};
+	params = params || {};
 	
 	
 	this.container = document.querySelector(selector);
@@ -102,24 +109,29 @@ NTPaypal.UI = function(selector, session, events){
 	if ( !(session instanceof NTPaypal.Session) )
 		throw new TypeError("'session' parameter of 'UI' constructor method is not an instance of 'Session'");
 	
-	if ( events.onCountries && !(typeof(events.onCountries) == 'function') )
-		throw new TypeError("'events.onCountries' parameter of 'UI' constructor method is not function");
+	if ( params.onCountries && !(typeof(params.onCountries) == 'function') )
+		throw new TypeError("'params.onCountries' parameter of 'UI' constructor method is not function");
 
-	if ( events.onShippingCost && !(typeof(events.onShippingCost) == 'function') )
-		throw new TypeError("'events.onShippingCost' parameter of 'UI' constructor method is not function");
+	if ( params.onShippingCost && !(typeof(params.onShippingCost) == 'function') )
+		throw new TypeError("'params.onShippingCost' parameter of 'UI' constructor method is not function");
 
-	if ( events.onPaymentReceived && !(typeof(events.onPaymentReceived) == 'function') )
-		throw new TypeError("'events.onPaymentReceived' parameter of 'UI' constructor method is not function");
+	if ( params.onPaymentReceived && !(typeof(params.onPaymentReceived) == 'function') )
+		throw new TypeError("'params.onPaymentReceived' parameter of 'UI' constructor method is not function");
 	
-	if ( events.onCustomMessage && !(typeof(events.onCustomMessage) == 'function') )
-		throw new TypeError("'events.onCustomMessage' parameter of 'UI' constructor method is not function");
+	if ( params.onCustomMessage && !(typeof(params.onCustomMessage) == 'function') )
+		throw new TypeError("'params.onCustomMessage' parameter of 'UI' constructor method is not function");
 	
 	
 	this.session = session;
-	this.onCountries = events.onCountries;
-	this.onPaymentReceived = events.onPaymentReceived;
-	this.onShippingCost = events.onShippingCost;
-	this.onCustomMessage = events.onCustomMessage;
+	this.onCountries = params.onCountries;
+	this.onPaymentReceived = params.onPaymentReceived;
+	this.onShippingCost = params.onShippingCost;
+	this.onCustomMessage = params.onCustomMessage;
+	
+	// if TOSLink is just a string, normalize it with an object litteral with url and no title
+	if ( typeof(params.TOSLink) == 'string' )
+		params.TOSLink = { url : params.TOSLink };
+	this.TOSLink = params.TOSLink;
 }
 
 
@@ -198,7 +210,7 @@ NTPaypal.UI.prototype.show = function()
 	// render sections
 	_ui_s1 = new NTPaypal.UI.Section1_Cart(_sect1_cart, this.session, __toShipping);
 	_ui_s2 = new NTPaypal.UI.Section2_Shipping(_sect2_shipping, __toCart, __toConfirm, this.onCountries);
-	_ui_s3 = new NTPaypal.UI.Section3_Confirm(_sect3_confirm, this.session, _ui_s2, __toCart, __toShipping, this.onShippingCost, this.onCustomMessage, this.onPaymentReceived);
+	_ui_s3 = new NTPaypal.UI.Section3_Confirm(_sect3_confirm, this.session, _ui_s2, __toCart, __toShipping, this.TOSLink, this.onShippingCost, this.onCustomMessage, this.onPaymentReceived);
 	_ui_s1.render();
 	_ui_s2.render();
 	_ui_s3.render();
@@ -515,11 +527,13 @@ NTPaypal.UI.Section2_Shipping = function(section, back, next, onCountries)
  * @param NTPaypal.UI.Section2_Shipping s2_ui_renderer Reference to renderer of "section 2 shipping" (used to retrieve customer details)
  * @param function backToCart Function to call to pass control back to "section 1 / cart"
  * @param function backToShipping Function to call to pass control back to "section 2 / shipping"
- * @param function onShippingCost Callback function(cart, customer):float|array returning shipping cost (float or array of object litteral (carrier, cost, shipping_time, image))
- * @param function onCustomMessage Callback function(cart, customer):string returning custom message 
+ * @param null|object TOSLink Objet litteral {title, url} to provide a link and title to Terms Of Sales file, or null if not required
+ * @param function onShippingCost Callback function(cart, customer) : float|array returning shipping cost (float or array of object litteral {carrier, cost, shipping_time, image})
+ * @param function onCustomMessage Callback function(cart, customer) : string returning custom message 
  * @param function onPaymentReceived Callback function(cart, customer, paypalData)
+ 
  */
-NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backToCart, backToShipping, onShippingCost, onCustomMessage, onPaymentReceived)
+NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backToCart, backToShipping, TOSLink, onShippingCost, onCustomMessage, onPaymentReceived)
 {
 	// call a user callback function to get either a float with shipping cost, or an array of (string carrier, float cost, string shipping_time, string image) object litterals 
 	// so that the user can choose its carrier
@@ -685,6 +699,7 @@ NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backTo
 </p>
 
 <p id="NTPP_s3_tos"><strong><label><input type="checkbox" value="1" id="cb_agreement">${i18n.agreement}</label></strong></p>
+<p id="NTPP_s3_tos_link"></p>
 
 <p id="NTPP_s3_custom_message"></p>
 
@@ -702,6 +717,12 @@ NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backTo
 		section.querySelector('.NTTP_buttons').getElementsByTagName('input')[1].onclick = backToShipping;
 		section.querySelector('.NTTP_buttons').getElementsByTagName('input')[2].onclick = __paypal;
 		section.querySelector('#NTPP_s3_carrier_select').onchange = __carrierChange;
+		
+		// TOS link
+		var toslnk = section.querySelector('#NTPP_s3_tos_link');
+		toslnk.style.display = (TOSLink && TOSLink.url) ? 'block' : 'none';
+		if ( TOSLink && TOSLink.url )
+			toslnk.innerHTML = `<a href="${TOSLink.url}">${TOSLink.title ? TOSLink.title : TOSLink.url}</a>`;
 	}
 	
 	
@@ -764,9 +785,25 @@ NTPaypal.UI.Section3_Confirm = function(section, session, s2_ui_renderer, backTo
 					label.appendChild(img);
 				}
 				
+
 				var span = document.createElement('SPAN');
-				span.innerHTML = (carrier.image ? '' : (carrier.carrier + '&nbsp;-&nbsp;')) + (carrier.shipping_time ? (carrier.shipping_time + ' ') : '') + `(+&nbsp;${Number.parseFloat(carrier.cost).toFixed(2)}&nbsp;${session.shop.currency_code})`;
 				span.title = carrier.carrier;
+				
+				
+				// create list of data describing carrier : title (not printed if image is present) + shipping_time (not mandatory) + cost
+				var dataspan = [];
+				if ( !carrier.image )
+					dataspan.push(carrier.carrier);
+				if ( carrier.shipping_time )
+					dataspan.push(carrier.shipping_time);
+				
+				// join span data that may omitted, and create a new array for mandatory data
+				var dataspan = dataspan.join('&nbsp;-&nbsp;');
+				var dataspan = dataspan ? [dataspan] : [];
+				dataspan.push(`(+&nbsp;${Number.parseFloat(carrier.cost).toFixed(2)}&nbsp;${session.shop.currency_code})`);
+
+				// create span content
+				span.innerHTML = dataspan.join('&nbsp;');
 				label.appendChild(span);
 				div.appendChild(label);
 			});
