@@ -1,7 +1,32 @@
 'use strict';
 
+
 // library namespace
 var NTPaypal = NTPaypal || {};
+
+
+
+
+
+// compatibility test
+NTPaypal.compatibilityTest = function()
+{
+	if ( typeof(Promise) != 'function' )
+		return false;
+	if ( typeof(fetch) != 'function' )
+		return false;
+	
+	return true;
+}
+
+
+
+
+// compatibility 
+if ( !NTPaypal.compatibilityTest() )
+	throw new Error("Browser not supported ; please use Edge > 14, Chrome, Firefox, Safari > 10.1");
+
+
 
 
 

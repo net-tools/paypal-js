@@ -269,6 +269,10 @@
 	<textarea id="log"></textarea>
 	
 	<script>
+	// compatibility paypal-js 
+	if ( !NTPaypal.compatibilityTest() )
+		alert("Browser is outdated.\nPlease use Edge > 14, Chrome, Firefox, Safari > 10.1");
+
 		
 	// restore paypal client ID saved to localStorage
 	var paypal_client_id = '';
