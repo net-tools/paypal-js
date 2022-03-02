@@ -43,9 +43,9 @@ class Product {
 		$this->category = $category;
 		$this->currency_code = $currency_code;
 		
-		$this->tax = $other['tax']?$other['tax']:0;
-		$this->sku = $other['sku']?$other['sku']:'';
-		$this->description = $other['description']?$other['description']:'';
+		$this->tax = isset($other['tax'])?$other['tax']:0;
+		$this->sku = isset($other['sku'])?$other['sku']:'';
+		$this->description = isset($other['description'])?$other['description']:'';
 	}
 	
 }
