@@ -267,11 +267,15 @@ NTPaypal.BrowserStorage.prototype.test = function(key){
 /**
  * Class defining methods for storing / restoring data from browser localStorage
  */
-NTPaypal.LocalStorage = function()
-{	
-    nettools.jscore.oop.parentConstructor(this);
-}
-nettools.jscore.oop.extend(NTPaypal.LocalStorage, NTPaypal.BrowserStorage);
+NTPaypal.LocalStorage = 
+	nettools.jscore.oop.extend(
+		function()
+		{	
+			nettools.jscore.oop.parentConstructor(this);
+		},
+		
+		NTPaypal.BrowserStorage
+	);
 
 
 /** 
@@ -316,11 +320,14 @@ NTPaypal.LocalStorage.prototype.delete = function(key){
 /**
  * Class defining methods for storing / restoring data from browser sessionStorage
  */
-NTPaypal.SessionStorage = function()
-{	
-    nettools.jscore.oop.parentConstructor(this);
-}
-nettools.jscore.oop.extend(NTPaypal.SessionStorage, NTPaypal.BrowserStorage);
+NTPaypal.SessionStorage = nettools.jscore.oop.extend(
+	function()
+	{	
+		nettools.jscore.oop.parentConstructor(this);
+	},
+	
+	NTPaypal.BrowserStorage
+);
 
 
 
@@ -366,11 +373,14 @@ NTPaypal.SessionStorage.prototype.delete = function(key){
 /**
  * Class defining methods for storing / restoring data from browser cookies
  */
-NTPaypal.CookiesStorage = function()
-{	
-    nettools.jscore.oop.parentConstructor(this);
-}
-nettools.jscore.oop.extend(NTPaypal.CookiesStorage, NTPaypal.BrowserStorage);
+NTPaypal.CookiesStorage = nettools.jscore.oop.extend(
+	function()
+	{	
+		nettools.jscore.oop.parentConstructor(this);
+	},
+	
+	NTPaypal.BrowserStorage
+);
 
 
 
