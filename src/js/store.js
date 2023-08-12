@@ -269,7 +269,7 @@ NTPaypal.BrowserStorage.prototype.test = function(key){
  */
 NTPaypal.LocalStorage = function()
 {	
-    nettools.jscore.oop.parentConstructor(NTPaypal.LocalStorage, this);
+    nettools.jscore.oop.parentConstructor(this);
 }
 nettools.jscore.oop.extend(NTPaypal.LocalStorage, NTPaypal.BrowserStorage);
 
@@ -318,7 +318,7 @@ NTPaypal.LocalStorage.prototype.delete = function(key){
  */
 NTPaypal.SessionStorage = function()
 {	
-    nettools.jscore.oop.parentConstructor(NTPaypal.SessionStorage, this);
+    nettools.jscore.oop.parentConstructor(this);
 }
 nettools.jscore.oop.extend(NTPaypal.SessionStorage, NTPaypal.BrowserStorage);
 
@@ -368,7 +368,7 @@ NTPaypal.SessionStorage.prototype.delete = function(key){
  */
 NTPaypal.CookiesStorage = function()
 {	
-    nettools.jscore.oop.parentConstructor(NTPaypal.CookiesStorage, this);
+    nettools.jscore.oop.parentConstructor(this);
 }
 nettools.jscore.oop.extend(NTPaypal.CookiesStorage, NTPaypal.BrowserStorage);
 
