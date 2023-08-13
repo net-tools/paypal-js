@@ -207,56 +207,55 @@ NTPaypal.Store.prototype.updateCartQuantity = function(sku, amount, cart)
 /**
  * Base class defining methods for storing / restoring data from browser (cookies, sessionStorage, localStorage, etc.)
  */
-NTPaypal.BrowserStorage = function()
+NTPaypal.BrowserStorage = class 
 {	
+	/** 
+	 * Abstract method for saving a value to storage
+	 *
+	 * @param string key
+	 * @param string value
+	 */
+	set(key, value){
+		throw new Error("'set' method not implemented in class '" + this.constructor.name + "'");
+	}
+
+
+
+	/** 
+	 * Abstract method for getting a value from storage
+	 *
+	 * @param string key
+	 * @return string
+	 */
+	get(key){
+		throw new Error("'get' method not implemented in class '" + this.constructor.name + "'");
+	}
+
+
+
+	/** 
+	 * Abstract method for deleting a value from storage
+	 *
+	 * @param string key
+	 */
+	delete(key){
+		throw new Error("'delete' method not implemented in class '" + this.constructor.name + "'");
+	}
+
+
+
+	/** 
+	 * Checking if a key exists in storage
+	 *
+	 * @param string key
+	 * @return bool Returns true if key exists (with value other than null)
+	 */
+	test(key){
+		return this.get(key) != null;
+	}
+
 }
 
-
-
-/** 
- * Abstract method for saving a value to storage
- *
- * @param string key
- * @param string value
- */
-NTPaypal.BrowserStorage.prototype.set = function(key, value){
-	throw new Error("'set' method not implemented in class '" + this.constructor.name + "'");
-}
-
-
-
-/** 
- * Abstract method for getting a value from storage
- *
- * @param string key
- * @return string
- */
-NTPaypal.BrowserStorage.prototype.get = function(key){
-	throw new Error("'get' method not implemented in class '" + this.constructor.name + "'");
-}
-
-
-
-/** 
- * Abstract method for deleting a value from storage
- *
- * @param string key
- */
-NTPaypal.BrowserStorage.prototype.delete = function(key){
-	throw new Error("'delete' method not implemented in class '" + this.constructor.name + "'");
-}
-
-
-
-/** 
- * Checking if a key exists in storage
- *
- * @param string key
- * @return bool Returns true if key exists (with value other than null)
- */
-NTPaypal.BrowserStorage.prototype.test = function(key){
-	return this.get(key) != null;
-}
 
 
 
@@ -267,49 +266,42 @@ NTPaypal.BrowserStorage.prototype.test = function(key){
 /**
  * Class defining methods for storing / restoring data from browser localStorage
  */
-NTPaypal.LocalStorage = 
-	nettools.jscore.oop.extend(
-		function()
-		{	
-			this.parentConstructor();
-		},
-		
-		NTPaypal.BrowserStorage
-	);
+class NTPaypal.LocalStorage extends NTPaypal.BrowserStorage
+{
+	/** 
+	 * Saving a value to storage
+	 *
+	 * @param string key
+	 * @param string value
+	 */
+	set(key, value){
+		return window.localStorage.setItem(key, value);
+	}
 
 
-/** 
- * Saving a value to storage
- *
- * @param string key
- * @param string value
- */
-NTPaypal.LocalStorage.prototype.set = function(key, value){
-	return window.localStorage.setItem(key, value);
+
+	/** 
+	 * Getting a value from storage
+	 *
+	 * @param string key
+	 * @return string
+	 */
+	get(key){
+		return window.localStorage.getItem(key);
+	}
+
+
+
+	/** 
+	 * Deleting a value from storage
+	 *
+	 * @param string key
+	 */
+	delete(key){
+		return window.localStorage.removeItem(key);
+	}
 }
 
-
-
-/** 
- * Getting a value from storage
- *
- * @param string key
- * @return string
- */
-NTPaypal.LocalStorage.prototype.get = function(key){
-	return window.localStorage.getItem(key);
-}
-
-
-
-/** 
- * Deleting a value from storage
- *
- * @param string key
- */
-NTPaypal.LocalStorage.prototype.delete = function(key){
-	return window.localStorage.removeItem(key);
-}
 
 
 
@@ -320,49 +312,43 @@ NTPaypal.LocalStorage.prototype.delete = function(key){
 /**
  * Class defining methods for storing / restoring data from browser sessionStorage
  */
-NTPaypal.SessionStorage = nettools.jscore.oop.extend(
-	function()
-	{	
-		this.parentConstructor();
-	},
-	
-	NTPaypal.BrowserStorage
-);
+class NTPaypal.SessionStorage extends NTPaypal.BrowserStorage {
+
+	/** 
+	 * Saving a value to storage
+	 *
+	 * @param string key
+	 * @param string value
+	 */
+	set(key, value){
+		return window.sessionStorage.setItem(key, value);
+	}
 
 
 
-/** 
- * Saving a value to storage
- *
- * @param string key
- * @param string value
- */
-NTPaypal.SessionStorage.prototype.set = function(key, value){
-	return window.sessionStorage.setItem(key, value);
+	/** 
+	 * Getting a value from storage
+	 *
+	 * @param string key
+	 * @return string
+	 */
+	get(key){
+		return window.sessionStorage.getItem(key);
+	}
+
+
+
+	/** 
+	 * Deleting a value from storage
+	 *
+	 * @param string key
+	 */
+	delete(key){
+		return window.sessionStorage.removeItem(key);
+	}
+
 }
 
-
-
-/** 
- * Getting a value from storage
- *
- * @param string key
- * @return string
- */
-NTPaypal.SessionStorage.prototype.get = function(key){
-	return window.sessionStorage.getItem(key);
-}
-
-
-
-/** 
- * Deleting a value from storage
- *
- * @param string key
- */
-NTPaypal.SessionStorage.prototype.delete = function(key){
-	return window.sessionStorage.removeItem(key);
-}
 
 
 
@@ -373,48 +359,42 @@ NTPaypal.SessionStorage.prototype.delete = function(key){
 /**
  * Class defining methods for storing / restoring data from browser cookies
  */
-NTPaypal.CookiesStorage = nettools.jscore.oop.extend(
-	function()
-	{	
-		this.parentConstructor();
-	},
+class NTPaypal.CookiesStorage extends NTPaypal.BrowserStorage{
+
+	/** 
+	 * Saving a value to storage
+	 *
+	 * @param string key
+	 * @param string value
+	 */
+	set(key, value){
+		return nettools.jscore.setCookie(key, value);
+	}
+
+
+
+	/** 
+	 * Getting a value from storage
+	 *
+	 * @param string key
+	 * @return string
+	 */
+	get(key){
+		return nettools.jscore.getCookie(key);
+	}
+
+
+
+	/** 
+	 * Deleting a value from storage
+	 *
+	 * @param string key
+	 */
+	delete(key){
+		return nettools.jscore.deleteCookie(key);
+	}
+
 	
-	NTPaypal.BrowserStorage
-);
-
-
-
-/** 
- * Saving a value to storage
- *
- * @param string key
- * @param string value
- */
-NTPaypal.CookiesStorage.prototype.set = function(key, value){
-	return nettools.jscore.setCookie(key, value);
-}
-
-
-
-/** 
- * Getting a value from storage
- *
- * @param string key
- * @return string
- */
-NTPaypal.CookiesStorage.prototype.get = function(key){
-	return nettools.jscore.getCookie(key);
-}
-
-
-
-/** 
- * Deleting a value from storage
- *
- * @param string key
- */
-NTPaypal.CookiesStorage.prototype.delete = function(key){
-	return nettools.jscore.deleteCookie(key);
 }
 
 
