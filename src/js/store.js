@@ -266,7 +266,7 @@ NTPaypal.BrowserStorage = class
 /**
  * Class defining methods for storing / restoring data from browser localStorage
  */
-class NTPaypal.LocalStorage extends NTPaypal.BrowserStorage
+NTPaypal.LocalStorage = class NTPaypal_LocalStorage  extends NTPaypal.BrowserStorage
 {
 	/** 
 	 * Saving a value to storage
@@ -312,7 +312,7 @@ class NTPaypal.LocalStorage extends NTPaypal.BrowserStorage
 /**
  * Class defining methods for storing / restoring data from browser sessionStorage
  */
-class NTPaypal.SessionStorage extends NTPaypal.BrowserStorage {
+NTPaypal.SessionStorage = class NTPaypal_SessionStorage extends NTPaypal.BrowserStorage {
 
 	/** 
 	 * Saving a value to storage
@@ -359,7 +359,7 @@ class NTPaypal.SessionStorage extends NTPaypal.BrowserStorage {
 /**
  * Class defining methods for storing / restoring data from browser cookies
  */
-class NTPaypal.CookiesStorage extends NTPaypal.BrowserStorage{
+NTPaypal.CookiesStorage = class NTPaypal_CookiesStorage extends NTPaypal.BrowserStorage{
 
 	/** 
 	 * Saving a value to storage
