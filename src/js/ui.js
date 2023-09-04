@@ -1,4 +1,8 @@
-'use strict';
+// ==ClosureCompiler==
+// @compilation_level SIMPLE_OPTIMIZATIONS
+// @output_file_name default.js
+// @language_out ECMASCRIPT_2017
+// ==/ClosureCompiler==
 
 
 
@@ -425,7 +429,7 @@ NTPaypal.UI.Section2_Shipping = function(section, back, next, onCountries)
 
 		// if all required fields set, go to confirm page
 		var val = fval.isValid(this.elements);
-		if ( val.statut )
+		if ( val.status )
 			next();
 		else
 		{
