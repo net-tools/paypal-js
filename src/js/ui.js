@@ -431,12 +431,12 @@ NTPaypal.UI.Section2_Shipping = function(section, back, next, onCountries)
 		var val = fval.isValid(this.elements);
 		if ( val.status )
 			next();
-		else
+		/*else
 		{
 			alert(val.message);
 			if ( val.field && val.field.focus )
 				val.field.focus();
-		}
+		}*/
 
 
 		// returning false, as the form is never submitted
